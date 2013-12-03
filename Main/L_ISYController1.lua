@@ -650,6 +650,8 @@ end
 
 --
 -- Node / Device status xml parser
+-- Parser for single device status data 
+-- returned using the /rest/status/nodeid api
 --
 function statusXMLParser(node)
     local result = {}        
@@ -696,6 +698,8 @@ end
 
 --
 -- All Nodes / Devices status xml parser
+-- Parser for status of all devices on data 
+-- returned using the /rest/status/ api
 --
 function allStatusXMLParser()
     local result = {}        
@@ -738,6 +742,8 @@ end
 
 --
 -- Node / Device config xml parser
+-- Parser for data returned using the
+-- /rest/nodes/devices api
 --
 function deviceXMLParser()
     local result = {}                            
