@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-garrettwp-com:device:ISYController:1</deviceType>
+    <friendlyName>ISY Controller</friendlyName>
+    <manufacturer>Universal Devices</manufacturer>
+    <manufacturerURL>http://www.universal-devices.com</manufacturerURL>
+    <modelDescription>ISY Insteon Controller</modelDescription>
+    <modelName>ISY</modelName>
+    <modelNumber>994i</modelNumber>
+    <handleChildren>1</handleChildren>
+    <staticJson>D_ISYController1.json</staticJson>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-garrettwp-com:service:ISYController:1</serviceType>
+        <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+        <SCPDURL>S_ISYController1.xml</SCPDURL>
+      </service>
+      <service>
+        <serviceType>urn:schemas-micasaverde-com:service:HaDevice:1</serviceType>
+        <serviceId>urn:micasaverde-com:serviceId:HaDevice1</serviceId>
+        <SCPDURL>S_HaDevice1.xml</SCPDURL>
+      </service>
+    </serviceList>
+    <implementationList>
+      <implementationFile>I_ISYController1.xml</implementationFile>
+    </implementationList>
+  </device>
+</root>

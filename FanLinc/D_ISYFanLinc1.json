@@ -1,0 +1,265 @@
+{
+	"flashicon": "icons\/isy_fan.png",
+	"imgIconBody": "",
+	"imgIconDimmable": "",
+	"imgIconTurnable": "",
+	"imgIconMin": "",
+	"imgIconMax": "",
+	"halloIconsDir": "pics\/hallo",
+	"x":"2",
+	"y":"4",
+	"inScene":"1",
+	"DisplayStatus": {
+		"Service": "urn:upnp-org:serviceId:Dimming1",
+		"Variable": "LoadLevelStatus",
+		"MinValue": "0",
+		"MaxValue": "100"
+	},
+	"doc_url": {
+		"doc_language": 1,
+		"doc_manual": 1,
+		"doc_version": 1,
+		"doc_platform": 0,
+		"doc_page": "lighting_devices"
+	},
+	"ToggleButton": 1,
+	"Tabs": [
+		{
+			"Label": {
+				"lang_tag": "tabname_control",
+				"text": "Control"
+			},
+			"Position": "0",
+			"TabType": "flash",
+			"ControlGroup":[
+				{
+					"id":"1",
+					"scenegroup":"1"
+				}
+			],
+			"SceneGroup":[
+				{
+					"id":"1",
+					"top": "1",
+					"left": "0",
+					"x":"2",
+					"y":"1"
+				}
+			],
+			"Control": [
+				{
+					"ControlGroup":"1",
+					"ControlType": "button",
+					"top": "1",
+					"left": "1",
+					"Label": {
+						"lang_tag": "cmd_high",
+						"text": "High"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Variable": "LoadLevelStatus",
+						"Value": "100",
+						"Top": 90,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Action": "SetLoadLevelTarget",
+						"Parameters": [
+							{
+								"Name": "newLoadlevelTarget",
+								"Value": "100"
+							}
+						]
+					}
+				},						
+				{
+					"ControlGroup":"1",
+					"ControlType": "button",
+					"top": "1",
+					"left": "0",
+					"Label": {
+						"lang_tag": "cmd_medium",
+						"text": "Medium"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Variable": "LoadLevelStatus",
+						"Value": "75",
+						"Top": 90,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Action": "SetLoadLevelTarget",
+						"Parameters": [
+							{
+								"Name": "newLoadlevelTarget",
+								"Value": "75"
+							}
+						]
+					}
+				},			
+				{
+					"ControlGroup":"1",
+					"ControlType": "button",
+					"top": "0",
+					"left": "1",
+					"Label": {
+						"lang_tag": "cmd_low",
+						"text": "Low"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Variable": "LoadLevelStatus",
+						"Value": "25",
+						"Top": 60,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Action": "SetLoadLevelTarget",
+						"Parameters": [
+							{
+								"Name": "newLoadlevelTarget",
+								"Value": "25"
+							}
+						]
+					}
+				},
+				{
+					"ControlGroup":"1",
+					"ControlType": "button",
+					"top": "0",
+					"left": "0",
+					"Label": {
+						"lang_tag": "cmd_off",
+						"text": "Off"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Variable": "LoadLevelStatus",
+						"Value": "0",
+						"Top": 60,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:Dimming1",
+						"Action": "SetLoadLevelTarget",
+						"Parameters": [
+							{
+								"Name": "newLoadlevelTarget",
+								"Value": "0"
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"Label": {
+				"lang_tag": "settings",
+				"text": "Settings"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "simple_device"
+		},
+		{
+			"Label": {
+				"lang_tag": "advanced",
+				"text": "Advanced"
+			},
+			"Position": "2",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "advanced_device"
+		},
+		{
+			"Label": {
+				"lang_tag": "logs",
+				"text": "Logs"
+			},
+			"Position": "3",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_logs"
+		},
+		{
+			"Label": {
+				"lang_tag": "notifications",
+				"text": "Notifications"
+			},
+			"Position": "4",
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_notifications"
+		}
+	],
+	"eventList2": [
+		{
+			"id": 1,
+			"label": {
+                "lang_tag": "a_fan_speed_has_changed",
+                "text": "The fan speed changes to low, medium, high, or off."
+            },
+			"serviceId": "urn:upnp-org:serviceId:Dimming1",
+			"argumentList": [
+				{
+					"id": 1,
+					"dataType": "ui2",
+					"defaultValue": "0",
+					"allowedValueList": [
+						{
+                            "Off": "0",
+                            "HumanFriendlyText": {
+                                "lang_tag": "hft_fan_turned_off",
+                                "text": "_DEVICE_NAME_ is turned off"
+                            }
+                        },
+                        {
+                            "Low": "25",
+                            "HumanFriendlyText": {
+                                "lang_tag": "hft_fan_on_low",
+                                "text": "_DEVICE_NAME_ is set to low"
+                            }
+                        },
+                        {
+                            "Medium": "75",
+                            "HumanFriendlyText": {
+                                "lang_tag": "hft_fan_on_medium",
+                                "text": "_DEVICE_NAME_ is set to medium"
+                            }
+                        },
+                        {
+                            "High": "100",
+                            "HumanFriendlyText": {
+                                "lang_tag": "hft_fan_on_high",
+                                "text": "_DEVICE_NAME_ is set to high"
+                            }
+                        }
+					],
+					"name": "LoadLevelStatus",
+					"comparisson": "=",
+					"prefix": {
+                        "lang_tag": "fan_speed",
+                        "text": "Fan speed"
+                    },
+					"suffix": {}
+				}
+			]
+		}
+	],
+	"DeviceType": "urn:schemas-garrettwp-com:device:ISYFanLinc:1",
+	"device_type": "urn:schemas-garrettwp-com:device:ISYFanLinc:1"
+}
