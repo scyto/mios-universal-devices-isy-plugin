@@ -16,6 +16,8 @@ local PARENT
 local ISYCONTROLLER_SERVICEID = "urn:garrettwp-com:serviceId:ISYController1"
 local SWITCH_SERVICEID = "urn:upnp-org:serviceId:SwitchPower1"
 local DIMMER_SERVICEID = "urn:upnp-org:serviceId:Dimming1"
+local LOCK_SERVICEID = "urn:micasaverde-com:serviceId:DoorLock1"
+local SENSOR_SERVICEID = "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SCENE_SID = "urn:micasaverde-com:serviceId:SceneController1"
 local HADEVICE_SID = "urn:micasaverde-com:serviceId:HaDevice1"
 
@@ -31,7 +33,7 @@ local deviceMap = {}
 local childToInsteonMap = {}
 local insteonToChildMap = {}
 
-local deviceCategory1 = {
+local insteonDeviceCategory1 = {
     ['1'] = true,
     dimmerKPL = {
         ['5'] = true,
@@ -80,7 +82,7 @@ local deviceCategory1 = {
     }
 }
 
-local deviceCategory2 = {
+local insteonDeviceCategory2 = {
     ['2'] = true,
     relayKPL = {
         ['5'] = true,
@@ -120,6 +122,25 @@ local deviceCategory2 = {
     }
 }
 
+local insteonDeviceCategory7 = {
+    ['7'] = true,
+    iolinc = {
+        ['0'] = true
+    }
+}
+
+local zwaveDeviceCategory4 = {
+    ['4'] = true,
+    relay = {
+        ['16'] = true
+    },
+    dimmer = {
+        ['17'] = true
+    },
+    lock = {
+        ['64'] = true
+    },
+}
 
 function log(text, level)
     luup.log("ISYController: " .. text, (level or 50))
@@ -392,30 +413,7 @@ function sendCommand(insteonId, type, cmd)
 			end
 		end
 		
-	elseif (type == "scene") then
-		local newCmd = url.escape(insteonId) .. "/cmd/" .. cmd
-	
-		debugLog("Rest command: /rest/nodes/" .. newCmd)
-	
-		local t = {}
-		request, code, headers = http.request {
-			url = "http://" .. isyIP .. ":" .. isyPort,
-			method = "GET /rest/nodes/" .. newCmd,
-			sink = ltn12.sink.table(t),
-			headers = {
-				["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
-			}
-		}
-		
-		if (code == 200) then
-			if (DEBUG == true) then
-				httpResponse = table.concat(t)
-				debugLog(httpResponse) 
-			end
-		end
-		
 	else
-		--local insteonId = childToInsteonMap[deviceId]
 		local newCmd = url.escape(insteonId) .. "/cmd/" .. cmd
 	
 		debugLog("Rest command: /rest/nodes/" .. newCmd)
@@ -442,13 +440,13 @@ end
 --
 -- Dimmable Device (Category 1)
 --
-function eventCategory1(node, action, subCat)
+function insteonEventCategory1(node, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)") -- insteon id and sub device
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
     local time = os.time(os.date('*t'))
     
     -- KeypadLinc Dimmer
-    if (deviceCategory1.dimmerKPL[subCat]) then
+    if (insteonDeviceCategory1.dimmerKPL[subCat]) then
         debugLog("KeypadLinc Dimmer: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
         local sceneId = getChild(insteonId) 
@@ -491,7 +489,7 @@ function eventCategory1(node, action, subCat)
         
         
     -- FanLinc
-    elseif (deviceCategory1.fanLinc[subCat]) then
+    elseif (insteonDeviceCategory1.fanLinc[subCat]) then
         debugLog("FanLinc: node " .. node .. " action: " .. action)
         local deviceId = getChild(node)
         local result = false
@@ -509,23 +507,15 @@ function eventCategory1(node, action, subCat)
         end
         
         -- FanLinc Dimmer
-        if (subDev == '1') then
-            local level = minMaxConversion(100, action)
-            result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+        local level = minMaxConversion(100, action)
+        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
             
-        -- FanLinc Fan    
-        elseif (subDev == '2') then
-        	local level = minMaxConversion(100, action)
-            result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
-            
-        end
-        
         if (result) then
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
         end
         
     -- Dimmer
-    elseif (deviceCategory1.dimmer[subCat]) then
+    elseif (insteonDeviceCategory1.dimmer[subCat]) then
         debugLog("Dimmer: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
         
@@ -555,13 +545,13 @@ end
 --
 -- Relay / Switch Device (Category 2)
 --
-function eventCategory2(node, action, subCat)
+function insteonEventCategory2(node, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
     local time = os.time(os.date('*t'))
 
     -- KeypadLinc Relay
-    if (deviceCategory2.relayKPL[subCat]) then
+    if (insteonDeviceCategory2.relayKPL[subCat]) then
         debugLog("KeypadLinc Relay: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
         local sceneId = getChild(insteonId)
@@ -599,7 +589,7 @@ function eventCategory2(node, action, subCat)
         end
         
     -- Relay / Switch
-    elseif (deviceCategory2.relay[subCat]) then
+    elseif (insteonDeviceCategory2.relay[subCat]) then
         debugLog("Relay: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
                 
@@ -624,21 +614,177 @@ function eventCategory2(node, action, subCat)
 end
 
 --
+-- IOLincs (Category 7)
+--
+function insteonEventCategory7(node, action, subCat)
+    local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
+    debugLog("insteonEventCategory7: insteonId " .. insteonId .. " subDev: " .. subDev)
+    local nodeParent = deviceMap[node].parent -- parent node of insteon device
+    local time = os.time(os.date('*t'))
+
+    -- IOLinc
+    if (insteonDeviceCategory7.iolinc[subCat]) then
+        debugLog("IOLinc: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        debugLog("deviceId = " .. deviceId)
+                
+        local result = nil
+                
+        -- Tripped --
+        local reverse = luup.variable_get(SENSOR_SERVICEID, "Reverse", deviceId)
+        if (reverse == nil) then
+            debugLog("reverse is nil ")
+              luup.variable_set(SENSOR_SERVICEID, "Reverse", "0", deviceId)
+              reverse = "0"
+        end
+
+        debugLog("reverse = " .. reverse)
+
+        if (reverse == "0") then
+
+              -- Off
+              if (action == "0") then
+                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+              
+              -- On
+              else
+                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+          
+              end
+        else
+              -- Off
+              if (action == "0") then
+                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+              
+              -- On
+              else
+                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+          
+              end
+        end
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
+    end
+end
+
+--
+-- Z-Wave Relay / Dimmer Device (Category 4)
+--
+function zwaveEventCategory4(node, action, subCat)
+    local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
+    local nodeParent = deviceMap[node].parent -- parent node of insteon device
+    local time = os.time(os.date('*t'))
+
+    -- Z-Wave Relay
+    if (zwaveDeviceCategory4.relay[subCat]) then
+        debugLog("Z-Wave Relay: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+                
+        local result = nil
+                
+        -- SwitchPower --
+        
+        -- Off
+        if (action == "0") then
+            result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
+            
+        -- On
+        else
+            result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
+        
+        end
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
+        
+    -- Dimmer
+    elseif (zwaveDeviceCategory4.dimmer[subCat]) then
+        debugLog("Z-Wave Dimmer: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        
+        local result = false
+        
+        -- SwitchPower --
+        
+        -- Off
+        if (action == "0") then
+            result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
+            
+        -- On
+        else
+            result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
+        
+        end
+        
+        local level = minMaxConversion(100, action)
+        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
+        
+    -- Lock
+    elseif (zwaveDeviceCategory4.lock[subCat]) then
+        debugLog("Z-Wave Lock: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        
+        local result = false
+        
+        -- SwitchPower --
+        
+        -- Off
+        if (action == "0") then
+            result = setIfChanged(LOCK_SERVICEID, 'Status', 0, deviceId)
+            
+        -- On
+        else
+            result = setIfChanged(LOCK_SERVICEID, 'Status', 1, deviceId)
+        
+        end
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
+    end
+end
+
+--
 -- Process incoming event from ISY Event Daemon
 --
 function processEvent(node, action)
+    debugLog("processEvent: " .. node .. " action: " .. action )
     if (deviceMap[node] ~= nil) then
+        local family = deviceMap[node].family
+        
         if (string.match(deviceMap[node].type, "^%d+%.%d+")) then
             local devCat, subCat = string.match(deviceMap[node].type, "^(%d+)%.(%d+)") -- category and sub-category of device
             
-            debugLog("Event node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
+            -- Insteon
+            if (family ~= nil and family == "1") then
+                
+                debugLog("Event family: " .. family .. " node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
             
-            if (deviceCategory1[devCat]) then
-                eventCategory1(node, action, subCat)
+                if (insteonDeviceCategory1[devCat]) then
+                    insteonEventCategory1(node, action, subCat)
+                    
+                elseif (insteonDeviceCategory2[devCat]) then
+                    insteonEventCategory2(node, action, subCat)
+                    
+                elseif (insteonDeviceCategory7[devCat]) then
+                    insteonEventCategory7(node, action, subCat)
+                end
                 
-            elseif (deviceCategory2[devCat]) then
-                eventCategory2(node, action, subCat)
-                
+            -- Z-wave
+            elseif (family ~= nil and family == "4") then 
+                debugLog("Event family: " .. family .. " node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
+                   
+                if (zwaveDeviceCategory4[devCat]) then
+                    zwaveEventCategory4(node, action, subCat)
+                    
+                end
             end
         end
     
@@ -800,6 +946,7 @@ function updateDeviceNames()
     for k, v in pairs(deviceMap) do
         local node = k
         local name = v.name
+        local family = v.family
         local type = v.type
         local parent = v.parent
         
@@ -807,55 +954,91 @@ function updateDeviceNames()
             local insteonId, subDev = string.match(parent, "(%w+ %w+ %w+) (%w+)")
             local devCat, subCat = string.match(type, "^(%d+)%.(%d+)")
             
-            -- Dimmer
-            if (deviceCategory1[devCat]) then
-                
-                -- KeypadLinc Dimmer
-                if (deviceCategory1.dimmerKPL[subCat]) then
-                    debugLog("Updating KeypadLinc Dimmer name for: node " .. node)
-                    
-                    -- Dimmable light
-                    luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
-                    
-                    -- Scene Controller
-                    luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
-                    
-                -- FanLinc
-                elseif (deviceCategory1.fanLinc[subCat]) then
-                    debugLog("Updating FanLinc name for: node " .. node)
-                    
-                    -- Dimmable light
-                    luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
-                    
-                    -- Fan 
-                    luup.attr_set("name", string.format("%s", deviceMap[insteonId .. " 2"].name), insteonToChildMap[string.format("%s", insteonId .. " 2")])
-                    
+            -- Insteon items
+            if (family ~= nil and family == "1") then
+            
                 -- Dimmer
-                elseif (deviceCategory1.dimmer[subCat]) then
-                    debugLog("Updating Dimmer name for: node " .. node)
+                if (insteonDeviceCategory1[devCat]) then
                     
-                    luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                    -- KeypadLinc Dimmer
+                    if (insteonDeviceCategory1.dimmerKPL[subCat]) then
+                        debugLog("Updating KeypadLinc Dimmer name for: node " .. node)
+                        
+                        -- Dimmable light
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                        
+                        -- Scene Controller
+                        luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
+                        
+                    -- FanLinc
+                    elseif (insteonDeviceCategory1.fanLinc[subCat]) then
+                        debugLog("Updating FanLinc name for: node " .. node)
+                        
+                        -- Dimmable light
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                        
+                        -- Fan 
+                        luup.attr_set("name", string.format("%s", deviceMap[insteonId .. " 2"].name), insteonToChildMap[string.format("%s", insteonId .. " 2")])
+                        
+                    -- Dimmer
+                    elseif (insteonDeviceCategory1.dimmer[subCat]) then
+                        debugLog("Updating Dimmer name for: node " .. node)
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                        
+                    end
+                    
+                -- Relay / Switch
+                elseif (insteonDeviceCategory2[devCat]) then
+                    
+                    -- KeypadLinc Relay
+                    if (insteonDeviceCategory2.relayKPL[subCat]) then
+                        debugLog("Updating KeypadLinc Relay name for: node " .. node)
+                        
+                        -- Binary light
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                              
+                        -- Scene Controller
+                        luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
+                                    
+                    -- Relay / Switch
+                    elseif (insteonDeviceCategory2.relay[subCat]) then
+                        debugLog("Updating Relay name for: node " .. node)
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                    end
+                
+                elseif (insteonDeviceCategory7[devCat]) then
+                    
+                    --
+                    -- TODO add category 7 / iolinc section
+                    --
                     
                 end
-                
-            -- Relay / Switch
-            elseif (deviceCategory2[devCat]) then
-                
-                -- KeypadLinc Relay
-                if (deviceCategory2.relayKPL[subCat]) then
-                    debugLog("Updating KeypadLinc Relay name for: node " .. node)
+
+            -- Z-Wave items
+            elseif (family ~= nil and family == "4") then
+                if (zwaveDeviceCategory4[devCat]) then
                     
-                    -- Binary light
-                    luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
-                          
-                    -- Scene Controller
-                    luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
-                                
-                -- Relay / Switch
-                elseif (deviceCategory2.relay[subCat]) then
-                    debugLog("Updating Relay name for: node " .. node)
-                    
-                    luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                    -- Relay
+                    if (zwaveDeviceCategory4.relay[subCat]) then
+                        debugLog("Updating Z-Wave Relay name for: node " .. node)
+                        
+                        -- Binary light
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                              
+                    -- Dimmer
+                    elseif (zwaveDeviceCategory4.dimmer[subCat]) then
+                        debugLog("Updating Z-Wave dimmer name for: node " .. node)
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+
+                    -- Lock
+                    elseif (zwaveDeviceCategory4.lock[subCat]) then
+                        debugLog("Updating Z-Wave lock name for: node " .. node)
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                    end
                 end
             end
         end
@@ -940,7 +1123,6 @@ end
 -- Get nodes / devices from ISY
 --
 function getDeviceData()
-    debugLog("Getting device configuration.")
     
 	local t = {}
 	request, code, headers = http.request {
@@ -969,6 +1151,7 @@ function getDeviceData()
                     
                     deviceMap[insteonId] = {}
                     deviceMap[insteonId]['name'] = devices[i].name
+                    deviceMap[insteonId]['family'] = devices[i].family or "1"
                     deviceMap[insteonId]['type'] = devices[i].type
                     deviceMap[insteonId]['parent'] = devices[i].pnode
                         
@@ -992,6 +1175,7 @@ local function initializeChildren(device)
     for k, v in pairs(deviceMap) do
         local node = k
         local name = v.name
+        local family = v.family
         local type = v.type
         local parent = v.parent
         local status = v.ST
@@ -1000,163 +1184,281 @@ local function initializeChildren(device)
             local insteonId, subDev = string.match(parent, "(%w+ %w+ %w+) (%w+)")
             local devCat, subCat = string.match(type, "^(%d+)%.(%d+)")
             
-            -- Dimmer
-            if (deviceCategory1[devCat]) then
+            debugLog("Parsing node " .. node .. "; family = " .. family .. "; devCat = " .. devCat .. "; subCat = " .. subCat)
                 
-                -- KeypadLinc Dimmer
-                if (deviceCategory1.dimmerKPL[subCat]) then
-                    local loadLevel
-                    local newStatus
-                                        
-                    debugLog("Creating KeypadLinc Dimmer for: node " .. node)
-                    
-                    -- On
-                    if (status ~= nil and tonumber(status) > 0) then  
-                        loadLevel = minMaxConversion(100, status)
-                        newStatus = 1
-                    
-                    -- Off
-                    else
-                        loadLevel = 0
-                        newStatus = 0
-                    end
-                    
-                    -- Dimmable light
-                    luup.chdev.append(device, children,
-                        string.format("%s", parent), string.format("%s", name),
-                        "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                        "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
-                    
-                    -- Scene Controller
-                    luup.chdev.append(device, children,
-                        string.format("%s", insteonId), string.format("%s SC", name),
-                        "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
-                        "", "", false)
-                    
-                -- FanLinc
-                elseif (deviceCategory1.fanLinc[subCat]) then
-                    debugLog("Creating FanLinc for: node " .. node)
-                    
-                    -- Dimmable light
-                    local loadLevel
-                    local newStatus
-                    
-                    -- On
-                    if (status ~= nil and tonumber(status) > 0) then
-                        loadLevel = minMaxConversion(100, status)
-                        newStatus = 1
-                    
-                    -- Off
-                    else
-                        loadLevel = 0  
-                        newStatus = 0
-                    end
-                    
-                    luup.chdev.append(device, children,
-                        string.format("%s", parent), string.format("%s", name),
-                        "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                        "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
-                    
-                    -- Fan 
-                    local fanStatus = deviceMap[insteonId .. " 2"].ST
-                    local fanNewStatus
-                    
-                    -- On
-                    if (fanStatus ~= nil and tonumber(fanStatus) > 0) then
-                        fanNewStatus = 1
-                    
-                    -- Off
-                    else
-                        fanStatus = 0
-                        fanNewStatus = 0
-                    end
-                    
-                    luup.chdev.append(device, children,
-                        string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
-                        "urn:schemas-garrettwp-com:device:ISYFanLinc:1", "D_ISYFanLinc1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. fanNewStatus .. 
-                        "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. fanStatus, false)
-                    
+            if (family ~= nil and family == "1") then
+            
                 -- Dimmer
-                elseif (deviceCategory1.dimmer[subCat]) then
-                    local loadLevel
-                    local newStatus
+                if (insteonDeviceCategory1[devCat]) then
                     
-                    debugLog("Creating Dimmer for: node " .. node)
-                    
-                    -- On
-                    if (status ~= nil and tonumber(status) > 0) then
-                        loadLevel = minMaxConversion(100, status)
-                        newStatus = 1
-                      
-                    -- Off
-                    else
-                        loadLevel = 0
-                        newStatus = 0
+                    -- KeypadLinc Dimmer
+                    if (insteonDeviceCategory1.dimmerKPL[subCat]) then
+                        local loadLevel
+                        local newStatus
+                                            
+                        debugLog("Creating KeypadLinc Dimmer for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then  
+                            loadLevel = minMaxConversion(100, status)
+                            newStatus = 1
+                        
+                        -- Off
+                        else
+                            loadLevel = 0
+                            newStatus = 0
+                        end
+                        
+                        -- Dimmable light
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                        
+                        -- Scene Controller
+                        luup.chdev.append(device, children,
+                            string.format("%s", insteonId), string.format("%s SC", name),
+                            "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
+                            "", "", false)
+                        
+                    -- FanLinc
+                    elseif (insteonDeviceCategory1.fanLinc[subCat]) then
+                        debugLog("Creating FanLinc for: node " .. node)
+                        
+                        -- Dimmable light
+                        local loadLevel
+                        local newStatus
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            loadLevel = minMaxConversion(100, status)
+                            newStatus = 1
+                        
+                        -- Off
+                        else
+                            loadLevel = 0  
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                        
+                        -- Fan 
+                        local fanStatus = deviceMap[insteonId .. " 2"].ST
+                        local fanNewStatus
+                        
+                        -- On
+                        if (fanStatus ~= nil and tonumber(fanStatus) > 0) then
+                            fanNewStatus = 1
+                        
+                        -- Off
+                        else
+                            fanStatus = 0
+                            fanNewStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
+                            "urn:schemas-garrettwp-com:device:ISYFanLinc:1", "D_ISYFanLinc1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. fanNewStatus .. 
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. fanStatus, false)
+                        
+                    -- Dimmer
+                    elseif (insteonDeviceCategory1.dimmer[subCat]) then
+                        local loadLevel
+                        local newStatus
+                        
+                        debugLog("Creating Dimmer for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            loadLevel = minMaxConversion(100, status)
+                            newStatus = 1
+                          
+                        -- Off
+                        else
+                            loadLevel = 0
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                        
                     end
                     
-                    luup.chdev.append(device, children,
-                        string.format("%s", parent), string.format("%s", name),
-                        "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                        "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
-                    
-                end
-                
-            -- Relay / Switch
-            elseif (deviceCategory2[devCat]) then
-                
-                -- KeypadLinc Relay
-                if (deviceCategory2.relayKPL[subCat]) then
-                    local newStatus
-                    
-                    debugLog("Creating KeypadLinc Relay for: node " .. node)
-                    
-                    -- On
-                    if (status ~= nil and tonumber(status) > 0) then
-                        newStatus = 1
-                      
-                    -- Off 
-                    else
-                        newStatus = 0
-                    end
-                    
-                    -- Binary light
-                    luup.chdev.append(device, children,
-                        string.format("%s", parent), string.format("%s", name),
-                        "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
-                            
-                    -- Scene Controller
-                    luup.chdev.append(device, children,
-                        string.format("%s", insteonId), string.format("%s SC", name),
-                        "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
-                        "", "", false)
-                                    
                 -- Relay / Switch
-                elseif (deviceCategory2.relay[subCat]) then
-                    local newStatus
+                elseif (insteonDeviceCategory2[devCat]) then
                     
-                    debugLog("Creating Relay for: node " .. node)
-                       
-                    
-                    -- On
-                    if (status ~= nil and tonumber(status) > 0) then
-                        newStatus = 1
-                      
-                    -- Off 
-                    else
-                        newStatus = 0
+                    -- KeypadLinc Relay
+                    if (insteonDeviceCategory2.relayKPL[subCat]) then
+                        local newStatus
+                        
+                        debugLog("Creating KeypadLinc Relay for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+                        
+                        -- Binary light
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                                
+                        -- Scene Controller
+                        luup.chdev.append(device, children,
+                            string.format("%s", insteonId), string.format("%s SC", name),
+                            "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
+                            "", "", false)
+                                        
+                    -- Relay / Switch
+                    elseif (insteonDeviceCategory2.relay[subCat]) then
+                        local newStatus
+                        
+                        debugLog("Creating Relay for: node " .. node)
+                           
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(PARENT, children,
+                            string.format("%s", parent), string.format("Insteon Relay %s", node),
+                            "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
                     end
+                
+                -- IOLinc
+                elseif (insteonDeviceCategory7[devCat]) then
                     
-                    luup.chdev.append(PARENT, children,
-                        string.format("%s", parent), string.format("Insteon Relay %s", node),
-                        "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                        "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                    -- IOLinc
+                    if (insteonDeviceCategory7.iolinc[subCat]) then
+                        debugLog("Creating IOLinc for: node " .. node)
+                        
+                        -- Sensor
+                        local newStatus
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                        
+                        -- Off
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-micasaverde-com:device:DoorSensor:1", "D_DoorSensor1.xml",
+                            "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus, false)
+                            --..  "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0" ..
+                            --"\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Reverse=0", false)
+
+                        -- Relay
+                        local relayStatus = deviceMap[insteonId .. " 2"].ST
+                        local relayNewStatus
+                        
+                        -- On
+                        if (relayStatus ~= nil and tonumber(relayStatus) > 0) then
+                            relayNewStatus = 1
+                        
+                        -- Off
+                        else
+                            relayStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
+                            "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. relayStatus, false)
+                    end
                 end
                 
+            -- Z-Wave items
+            elseif (family ~= nil and family == "4") then
+                    
+                if (zwaveDeviceCategory4[devCat]) then
+                    
+                    -- Relay / Switch
+                    if (zwaveDeviceCategory4.relay[subCat]) then
+                        local newStatus
+                        
+                        debugLog("Creating Z-Wave Relay for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(PARENT, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+
+                    -- Dimmer
+                    elseif (zwaveDeviceCategory4.dimmer[subCat]) then
+                    	local loadLevel
+                        local newStatus
+                        
+                        debugLog("Creating Z-Wave dimmer for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                            --.. "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+
+                    -- Lock
+                    elseif (zwaveDeviceCategory4.lock[subCat]) then
+                        local newStatus
+                        
+                        debugLog("Creating Z-Wave lock for: node " .. node)
+                        
+                        -- On
+                        if (status ~= nil and tonumber(status) > 0) then
+                            newStatus = 1
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(PARENT, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-micasaverde-com:device:DoorLock:1", "D_DoorLock1.xml",
+                            "", "urn:micasaverde-com:serviceId:DoorLock1,Status=" .. newStatus, false)
+                    end
+                end
             end
         end
     end

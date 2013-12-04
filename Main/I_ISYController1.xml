@@ -33,11 +33,11 @@
 				package.path = package.path .. ";/etc/cmh-ludl/?.lua;/etc/cmh-lu/?.lua"
 			end
 			
-			-- Load the Lua daemon implementation
+			-- Load the Lua event daemon implementation
 			package.loaded.L_ISYEvent = nil
 			daemon = require("L_ISYEvent")
 			
-			-- Load the Lua implementation.
+			-- Load the ISY Lua implementation.
 			package.loaded.L_ISYController1 = nil
 			plugin = require("L_ISYController1")
 			
@@ -130,10 +130,10 @@
 				local target = lul_settings.newTargetValue
 				
 				if (target == "0") then
-					plugin.sendCommand(id, "scene", "DOF")
+					plugin.sendCommand(id, "", "DOF")
 				
 				else
-					plugin.sendCommand(id, "scene", "DON")
+					plugin.sendCommand(id, "", "DON")
 					
 				end
 				
@@ -148,10 +148,10 @@
 				local altId = luup.devices[lul_device].id
 				
 				if (target == "1") then
-					plugin.sendCommand(altId, "switch", "DON")
+					plugin.sendCommand(altId, "", "DON")
 					
 				else 
-					plugin.sendCommand(altId, "switch", "DOF")
+					plugin.sendCommand(altId, "", "DOF")
 				
 				end
 			</run>
@@ -166,13 +166,47 @@
                	local newLevel = plugin.minMaxConversion(255, level)
 			   
 				if (level == "0") then
-					plugin.sendCommand(altId, "dimmer", "DOF")
+					plugin.sendCommand(altId, "", "DOF")
 			
 				else
-					plugin.sendCommand(altId, "dimmer", "DON/" .. newLevel)
+					plugin.sendCommand(altId, "", "DON/" .. newLevel)
 				
 				end
                	
+			</run>
+		</action>
+    	<action>
+			<serviceId>urn:micasaverde-com:serviceId:DoorLock1</serviceId>
+			<name>SetTarget</name>
+			<run>
+				local target = lul_settings.newTargetValue
+				local altId = luup.devices[lul_device].id
+				
+				if (target == "1") then
+					plugin.sendCommand(altId, "", "SECMD/1")
+					
+				else 
+					plugin.sendCommand(altId, "", "SECMD/0")
+				
+				end
+			</run>
+		</action>
+    	<action>
+			<serviceId>urn:micasaverde-com:serviceId:SecuritySensor1</serviceId>
+			<name>SetArmed</name>
+			<run>
+				local target = lul_settings.newArmedValue
+				luup.log("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
+				
+				if (target == "1") then
+			  		--luup.variable_set("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
+			  		plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
+					
+				else 
+          			--luup.variable_set("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
+					plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
+					
+        		end
 			</run>
 		</action>
 		<action>
@@ -185,10 +219,10 @@
 				local state = luup.variable_get(SWITCH_SERVICEID, "Status", lul_device)
 
 				if (state == "1") then
-				  plugin.sendCommand(altId, "switch", "DOF")
+				  plugin.sendCommand(altId, "", "DOF")
 
 				else
-				  plugin.sendCommand(altId, "switch", "DON")
+				  plugin.sendCommand(altId, "", "DON")
 				  
 				end
 				
@@ -205,3 +239,4 @@
 		</action>
     </actionList>
 </implementation>
+
