@@ -199,12 +199,10 @@
 				luup.log("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
 				
 				if (target == "1") then
-			  		--luup.variable_set("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
 			  		plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
 					
 				else 
-          			--luup.variable_set("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
-					plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
+          			plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
 					
         		end
 			</run>

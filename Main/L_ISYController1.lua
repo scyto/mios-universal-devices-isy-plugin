@@ -129,6 +129,15 @@ local insteonDeviceCategory7 = {
     }
 }
 
+local insteonDeviceCategory16 = {
+    ['16'] = true,
+    motionSensor = {
+        ['1'] = true,
+        ['3'] = true,
+        ['9'] = true
+    }
+}
+
 local zwaveDeviceCategory4 = {
     ['4'] = true,
     relay = {
@@ -438,7 +447,7 @@ function sendCommand(insteonId, type, cmd)
 end
 
 --
--- Dimmable Device (Category 1)
+-- Insteon Dimmable Device (Category 1)
 --
 function insteonEventCategory1(node, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)") -- insteon id and sub device
@@ -543,7 +552,7 @@ function insteonEventCategory1(node, action, subCat)
 end
 
 --
--- Relay / Switch Device (Category 2)
+-- Insteon Relay / Switch Device (Category 2)
 --
 function insteonEventCategory2(node, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
@@ -614,7 +623,7 @@ function insteonEventCategory2(node, action, subCat)
 end
 
 --
--- IOLincs (Category 7)
+-- Insteon Sensors and Actuators (Category 7)
 --
 function insteonEventCategory7(node, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
@@ -640,27 +649,30 @@ function insteonEventCategory7(node, action, subCat)
 
         debugLog("reverse = " .. reverse)
 
+        -- not reversed
         if (reverse == "0") then
 
-              -- Off
-              if (action == "0") then
-                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
-              
-              -- On
-              else
-                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
-          
-              end
+            -- secure (not tripped)
+            if (action == "0") then
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+  
+            -- tripped
+            else
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+  
+            end
+            
+        -- reversed
         else
-              -- Off
-              if (action == "0") then
-                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+            -- tripped
+            if (action == "0") then
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
               
-              -- On
-              else
-                  result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+            -- secure (not tripped)
+            else
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
           
-              end
+            end
         end
         
         if (result) then
@@ -668,6 +680,39 @@ function insteonEventCategory7(node, action, subCat)
         end
     end
 end
+
+--
+-- Insteon Security / Health / Safety (Category 16)
+--
+function insteonEventCategory16(node, action, subCat)
+    local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
+    debugLog("insteonEventCategory16: insteonId " .. insteonId .. " subDev: " .. subDev)
+    local nodeParent = deviceMap[node].parent -- parent node of insteon device
+    local time = os.time(os.date('*t'))
+
+    -- Motion Sensor
+    if (insteonDeviceCategory16.motionSensor[subCat]) then
+        debugLog("MotionSensor: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+                
+        local result = nil
+           
+        -- secure (not tripped)
+        if (action == "0") then
+            result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+      
+        -- tripped
+        else
+            result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+      
+        end
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
+    end
+end
+
 
 --
 -- Z-Wave Relay / Dimmer Device (Category 4)
@@ -767,14 +812,22 @@ function processEvent(node, action)
                 
                 debugLog("Event family: " .. family .. " node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
             
+                -- insteon dimmer event
                 if (insteonDeviceCategory1[devCat]) then
                     insteonEventCategory1(node, action, subCat)
                     
+                -- insteon relay / switch event
                 elseif (insteonDeviceCategory2[devCat]) then
                     insteonEventCategory2(node, action, subCat)
                     
+                -- insteon sensor / actuator event
                 elseif (insteonDeviceCategory7[devCat]) then
                     insteonEventCategory7(node, action, subCat)
+                    
+                -- insteon security / health / safety event
+                elseif (insteonDeviceCategory16[devCat]) then
+                    insteonEventCategory16(node, action, subCat)
+                    
                 end
                 
             -- Z-wave
@@ -1008,14 +1061,32 @@ function updateDeviceNames()
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                     end
                 
+                -- Sensor / Actuator
                 elseif (insteonDeviceCategory7[devCat]) then
                     
-                    --
-                    -- TODO add category 7 / iolinc section
-                    --
+                    -- IOLinc
+                    if (insteonDeviceCategory7.iolinc[subCat]) then
+                        debugLog("Updating IOLinc name for: node " .. node)
+                        
+                        -- Security Sensor
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                              
+                        -- Relay
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[insteonId] .. " 2")
+                    end             
+                   
+                -- Security / Health / Safety
+                elseif (insteonDeviceCategory16[devCat]) then
                     
+                    -- Motion Sensor
+                    if (insteonDeviceCategory16.motionSensor[subCat]) then
+                        debugLog("Updating Motion Sensor name for: node " .. node)
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                    end
+                   
                 end
-
+                
             -- Z-Wave items
             elseif (family ~= nil and family == "4") then
                 if (zwaveDeviceCategory4[devCat]) then
@@ -1052,71 +1123,71 @@ function getDeviceStatusData(node)
     local request
     local code
     local headers
-	local t = {}
+    local t = {}
     
     if (node ~= nil) then
-    	debugLog("Getting device status for node: " .. node)
+        debugLog("Getting device status for node: " .. node)
     	
-		request, code, headers = http.request {
-			url = "http://" .. isyIP .. ":" .. isyPort,
-			method = "GET /rest/status/" .. url.escape(node),
-			sink = ltn12.sink.table(t),
-			headers = {
-				["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
-			}
-		}
+        request, code, headers = http.request {
+            url = "http://" .. isyIP .. ":" .. isyPort,
+            method = "GET /rest/status/" .. url.escape(node),
+            sink = ltn12.sink.table(t),
+            headers = {
+                ["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
+            }
+        }
 	
-	else 
-		debugLog("Getting device status for all nodes.")
+    else 
+        debugLog("Getting device status for all nodes.")
 		
-		request, code, headers = http.request {
-			url = "http://" .. isyIP .. ":" .. isyPort,
-			method = "GET /rest/status/",
-			sink = ltn12.sink.table(t),
-			headers = {
-				["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
-			}
-		}
+        request, code, headers = http.request {
+            url = "http://" .. isyIP .. ":" .. isyPort,
+            method = "GET /rest/status/",
+            sink = ltn12.sink.table(t),
+            headers = {
+                ["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
+            }
+        }
 		
-	end
+    end
 
-	if (code == 200) then
-		httpResponse = table.concat(t)
+    if (code == 200) then
+        httpResponse = table.concat(t)
 
-		if (httpResponse) then
-			local eventParser
+        if (httpResponse) then
+            local eventParser
 			
-			if (node ~= nil) then
-				eventParser = statusXMLParser(node)
+            if (node ~= nil) then
+                eventParser = statusXMLParser(node)
 				
-			else 
-				eventParser = allStatusXMLParser()
+            else 
+                eventParser = allStatusXMLParser()
 				
-			end
+            end
 			
-			local result, reason = eventParser:parse(httpResponse)
-			eventParser:close()
+            local result, reason = eventParser:parse(httpResponse)
+            eventParser:close()
 			
-			if (result) then
+            if (result) then
                 local devices = eventParser.result()
 				
-				-- Add device to device map
+                -- Add device to device map
                 for i = 1, #devices do
                     local insteonId = devices[i].address
                     
                     if (deviceMap[insteonId] ~= nil) then
                         
-						for k, v in pairs(devices[i].property) do
-							debugLog("Device: " .. insteonId .. " status: " .. k .. " value: " .. v)
-							--deviceMap[insteonId][k] = v
-						end
-					end
+                        for k, v in pairs(devices[i].property) do
+                            debugLog("Device: " .. insteonId .. " status: " .. k .. " value: " .. v)
+                            --deviceMap[insteonId][k] = v
+                        end
+                    end
                 end
                 
                 return true
-			end
-		end
-	end
+            end
+        end
+    end
 end
 
 --
@@ -1352,7 +1423,7 @@ local function initializeChildren(device)
                     if (insteonDeviceCategory7.iolinc[subCat]) then
                         debugLog("Creating IOLinc for: node " .. node)
                         
-                        -- Sensor
+                        -- Security Sensor
                         local newStatus
                         
                         -- On
@@ -1388,6 +1459,31 @@ local function initializeChildren(device)
                             string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
                             "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
                             "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. relayStatus, false)
+                    end
+                    
+                -- Security / Health / Safety
+                elseif (insteonDeviceCategory16[devCat]) then
+                    
+                    -- Motion Sensor
+                    if (insteonDeviceCategory16.motionSensor[subCat]) then
+                        debugLog("Creating Motion Sensor for: node " .. node)
+                        
+                        local newStatus
+                        
+                        -- tripped
+                        if (status ~= nil and tonumber(status) == 1) then
+                            newStatus = 1
+                        
+                        -- secure (not tripped)
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-micasaverde-com:device:MotionSensor:1", "D_MotionSensor1.xml",
+                            "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus ..  
+                            "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0", false)
                     end
                 end
                 
