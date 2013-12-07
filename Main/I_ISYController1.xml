@@ -162,8 +162,17 @@
 			<run>
 				local level = lul_settings.newLoadlevelTarget
 				local altId = luup.devices[lul_device].id
-               
-               	local newLevel = plugin.minMaxConversion(255, level)
+        local family = luup.variable_get("urn:garrettwp-com:serviceId:ISYController1", "Family", lul_device)
+       	local newLevel = plugin.minMaxConversion(255, level)
+
+        if (family == nil) then
+          luup.log("ISYController: family is nil - assuming Insteon dimmer - using scale 0-255")
+        elseif (family == "1") then
+          luup.log("ISYController: family is 1 - Insteon dimmer - using scale 0-255")
+        elseif (family == "4") then
+          luup.log("ISYController: family = 4 - Z-Wave dimmer - using scale 0-100")
+          newLevel = level
+        end
 			   
 				if (level == "0") then
 					plugin.sendCommand(altId, "", "DOF")
