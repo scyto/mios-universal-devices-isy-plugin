@@ -764,8 +764,7 @@ function zwaveEventCategory4(node, action, subCat)
         
         end
         
-        local level = minMaxConversion(100, action)
-        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', action, deviceId)
         
         if (result) then
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
@@ -1285,7 +1284,8 @@ local function initializeChildren(device)
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
                             "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                         
                         -- Scene Controller
                         luup.chdev.append(device, children,
@@ -1316,7 +1316,8 @@ local function initializeChildren(device)
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
                             "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                         
                         -- Fan 
                         local fanStatus = deviceMap[insteonId .. " 2"].ST
@@ -1336,7 +1337,8 @@ local function initializeChildren(device)
                             string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
                             "urn:schemas-garrettwp-com:device:ISYFanLinc:1", "D_ISYFanLinc1.xml",
                             "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. fanNewStatus .. 
-                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. fanStatus, false)
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. fanStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                         
                     -- Dimmer
                     elseif (insteonDeviceCategory1.dimmer[subCat]) then
@@ -1360,7 +1362,8 @@ local function initializeChildren(device)
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
                             "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus .. 
-                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
+                            "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                         
                     end
                     
@@ -1386,7 +1389,8 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                                 
                         -- Scene Controller
                         luup.chdev.append(device, children,
@@ -1413,7 +1417,8 @@ local function initializeChildren(device)
                         luup.chdev.append(PARENT, children,
                             string.format("%s", parent), string.format("Insteon Relay %s", node),
                             "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                     end
                 
                 -- IOLinc
@@ -1438,7 +1443,8 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-micasaverde-com:device:DoorSensor:1", "D_DoorSensor1.xml",
-                            "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus, false)
+                            "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                             --..  "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0" ..
                             --"\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Reverse=0", false)
 
@@ -1458,7 +1464,8 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", insteonId .. " 2"), string.format("%s", deviceMap[insteonId .. " 2"].name),
                             "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. relayStatus, false)
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. relayStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                     end
                     
                 -- Security / Health / Safety
@@ -1483,7 +1490,8 @@ local function initializeChildren(device)
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-micasaverde-com:device:MotionSensor:1", "D_MotionSensor1.xml",
                             "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus ..  
-                            "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0", false)
+                            "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0" ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                     end
                 end
                 
@@ -1499,7 +1507,7 @@ local function initializeChildren(device)
                         debugLog("Creating Z-Wave Relay for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1510,7 +1518,8 @@ local function initializeChildren(device)
                         luup.chdev.append(PARENT, children,
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:BinaryLight:1", "D_BinaryLight1.xml",
-                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=4", false)
 
                     -- Dimmer
                     elseif (zwaveDeviceCategory4.dimmer[subCat]) then
@@ -1520,7 +1529,7 @@ local function initializeChildren(device)
                         debugLog("Creating Z-Wave dimmer for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1531,7 +1540,8 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:DimmableLight:1", "D_DimmableLight1.xml",
-                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus, false)
+                            "", "urn:upnp-org:serviceId:SwitchPower1,Status=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=4", false)
                             --.. "\n" .. "urn:upnp-org:serviceId:Dimming1,LoadLevelStatus=" .. loadLevel, false)
 
                     -- Lock
@@ -1541,7 +1551,7 @@ local function initializeChildren(device)
                         debugLog("Creating Z-Wave lock for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1552,7 +1562,8 @@ local function initializeChildren(device)
                         luup.chdev.append(PARENT, children,
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-micasaverde-com:device:DoorLock:1", "D_DoorLock1.xml",
-                            "", "urn:micasaverde-com:serviceId:DoorLock1,Status=" .. newStatus, false)
+                            "", "urn:micasaverde-com:serviceId:DoorLock1,Status=" .. newStatus ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=4", false)
                     end
                 end
             end
