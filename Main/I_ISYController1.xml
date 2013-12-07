@@ -162,17 +162,16 @@
 			<run>
 				local level = lul_settings.newLoadlevelTarget
 				local altId = luup.devices[lul_device].id
-        local family = luup.variable_get("urn:garrettwp-com:serviceId:ISYController1", "Family", lul_device)
-       	local newLevel = plugin.minMaxConversion(255, level)
+                local family = luup.variable_get("urn:garrettwp-com:serviceId:ISYController1", "Family", lul_device)
+                local newLevel = plugin.minMaxConversion(255, level)
 
-        if (family == nil) then
-          luup.log("ISYController: family is nil - assuming Insteon dimmer - using scale 0-255")
-        elseif (family == "1") then
-          luup.log("ISYController: family is 1 - Insteon dimmer - using scale 0-255")
-        elseif (family == "4") then
-          luup.log("ISYController: family = 4 - Z-Wave dimmer - using scale 0-100")
-          newLevel = level
-        end
+                if (family == nil or family == "1") then
+                    plugin.debugLog("ISYController: family is nil - assuming Insteon dimmer - using scale 0-255")
+        
+                elseif (family == "4") then
+                    plugin.debugLog("ISYController: family = 4 - Z-Wave dimmer - using scale 0-100")
+                    newLevel = level
+                end
 			   
 				if (level == "0") then
 					plugin.sendCommand(altId, "", "DOF")
@@ -205,7 +204,7 @@
 			<name>SetArmed</name>
 			<run>
 				local target = lul_settings.newArmedValue
-				luup.log("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
+				plugin.debugLog("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
 				
 				if (target == "1") then
 			  		plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)

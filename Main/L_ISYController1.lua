@@ -1315,7 +1315,7 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", insteonId), string.format("%s SC", name),
                             "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
-                            "", "", false)
+                            "", "urn:garrettwp-com:serviceId:ISYController1,Family=1", false)
 					end  
             
                 -- Dimmer
@@ -1351,7 +1351,7 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", insteonId), string.format("%s SC", name),
                             "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
-                            "", "", false)
+                            "", "urn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                         
                     -- FanLinc
                     elseif (insteonDeviceCategory1.fanLinc[subCat]) then
@@ -1456,7 +1456,7 @@ local function initializeChildren(device)
                         luup.chdev.append(device, children,
                             string.format("%s", insteonId), string.format("%s SC", name),
                             "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
-                            "", "", false)
+                            "", "urn:garrettwp-com:serviceId:ISYController1,Family=1", false)
                                         
                     -- Relay / Switch
                     elseif (insteonDeviceCategory2.relay[subCat]) then
