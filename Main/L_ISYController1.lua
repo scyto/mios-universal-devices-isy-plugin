@@ -33,6 +33,13 @@ local deviceMap = {}
 local childToInsteonMap = {}
 local insteonToChildMap = {}
 
+local insteonDeviceCategory0 = {
+    ['0'] = true,
+    remoteLinc = {
+        ['16'] = true
+    }
+}
+
 local insteonDeviceCategory1 = {
     ['1'] = true,
     dimmerKPL = {
@@ -447,6 +454,32 @@ function sendCommand(insteonId, type, cmd)
 end
 
 --
+-- Insteon Controller (Category 0)
+--
+function insteonEventCategory0(node, action, subCat)
+    local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
+    debugLog("insteonEventCategory0: insteonId " .. insteonId .. " subDev: " .. subDev)
+    local time = os.time(os.date('*t'))
+
+    -- RemoteLinc 4 Button Scene Controller
+    if (insteonDeviceCategory0.remoteLinc[subCat]) then
+        debugLog("RemoteLinc 4 Btn Scene: node " .. node .. " action: " .. action)
+        local sceneId = getChild(insteonId)
+        
+        -- Scene Button
+        if (action == "0") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+        
+        elseif (action == "255") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        end
+    end
+end
+
+--
 -- Insteon Dimmable Device (Category 1)
 --
 function insteonEventCategory1(node, action, subCat)
@@ -495,7 +528,6 @@ function insteonEventCategory1(node, action, subCat)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
-        
         
     -- FanLinc
     elseif (insteonDeviceCategory1.fanLinc[subCat]) then
@@ -812,8 +844,12 @@ function processEvent(node, action)
                 
                 debugLog("Event family: " .. family .. " node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
             
+            	-- insteon controller event
+                if (insteonDeviceCategory0[devCat]) then
+                    insteonEventCategory0(node, action, subCat)
+                  
                 -- insteon dimmer event
-                if (insteonDeviceCategory1[devCat]) then
+                elseif (insteonDeviceCategory1[devCat]) then
                     insteonEventCategory1(node, action, subCat)
                     
                 -- insteon relay / switch event
@@ -1010,8 +1046,19 @@ function updateDeviceNames()
             -- Insteon items
             if (family ~= nil and family == "1") then
             
+            	-- Controller
+                if (insteonDeviceCategory0[devCat]) then
+                
+                	-- RemoteLinc
+                    if (insteonDeviceCategory0.remoteLinc[subCat]) then
+                        debugLog("Updating RemoteLinc name for: node " .. node)
+                        
+                        -- Scene Controller
+                        luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
+                    end
+                
                 -- Dimmer
-                if (insteonDeviceCategory1[devCat]) then
+                elseif (insteonDeviceCategory1[devCat]) then
                     
                     -- KeypadLinc Dimmer
                     if (insteonDeviceCategory1.dimmerKPL[subCat]) then
@@ -1259,8 +1306,21 @@ local function initializeChildren(device)
                 
             if (family ~= nil and family == "1") then
             
+            	-- Controller
+                if (insteonDeviceCategory0[devCat]) then
+            
+            		-- RemoteLinc
+                    if (insteonDeviceCategory0.remoteLinc[subCat]) then
+                        
+                        -- Scene Controller
+                        luup.chdev.append(device, children,
+                            string.format("%s", insteonId), string.format("%s SC", name),
+                            "urn:schemas-micasaverde-com:device:SceneController:1", "D_SceneController1.xml",
+                            "", "", false)
+					end  
+            
                 -- Dimmer
-                if (insteonDeviceCategory1[devCat]) then
+                elseif (insteonDeviceCategory1[devCat]) then
                     
                     -- KeypadLinc Dimmer
                     if (insteonDeviceCategory1.dimmerKPL[subCat]) then
