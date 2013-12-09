@@ -122,6 +122,18 @@
 				return 4,0
 			</job>
 		</action>
+    <action>
+			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+			<name>runProgram</name>
+			<job>
+				local program = lul_settings.program
+				local path = lul_settings.path
+
+				plugin.sendCommand(program, "program", path)
+				
+				return 4,0
+			</job>
+		</action>
 		<action>
 			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
 			<name>runScene</name>

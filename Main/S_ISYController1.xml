@@ -128,5 +128,20 @@
 		</argument>
       </argumentList>
     </action>
+    <action>
+      <name>runProgram</name>
+      <argumentList>
+        <argument>
+          <name>program</name>
+          <direction>in</direction>
+          <relatedStateVariable>string</relatedStateVariable>
+        </argument>
+        <argument>
+          <name>path</name>
+          <direction>in</direction>
+          <relatedStateVariable>string</relatedStateVariable>
+        </argument>
+      </argumentList>
+    </action>
   </actionList>
 </scpd>
