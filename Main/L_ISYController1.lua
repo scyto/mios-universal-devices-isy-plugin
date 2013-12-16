@@ -48,7 +48,9 @@ local insteonDeviceCategory1 = {
         ['12'] = true,
         ['27'] = true,
         ['28'] = true,
-        ['41'] = true
+        ['41'] = true,
+        ['65'] = true,
+        ['66'] = true
     },
     dimmer = {
         ['0'] = true,
