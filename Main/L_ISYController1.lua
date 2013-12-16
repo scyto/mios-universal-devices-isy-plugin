@@ -127,7 +127,8 @@ local insteonDeviceCategory2 = {
         ['34'] = true,
         ['35'] = true,
         ['41'] = true,
-        ['42'] = true
+        ['42'] = true,
+        ['55'] = true
     }
 }
 
