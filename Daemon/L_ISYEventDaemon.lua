@@ -228,9 +228,9 @@ end
 -- This queue will be sent when the event daemon process
 -- is back in its main loop.
 --
-function queueEvent(node, action)
+function queueEvent(node, command, action)
     if (DEBUG == true) then
-        log("Queueing event for " .. node .. " action: " .. action)
+        log("Queueing event for " .. node .. " command: " .. command .. " action: " .. action)
     end
     
     table.insert(eventQueue, {
@@ -242,6 +242,7 @@ function queueEvent(node, action)
                 "&serviceId=urn:garrettwp-com:serviceId:ISYController1" ..
                 "&action=newEvent" .. 
                 "&node=".. url.escape(node) .. 
+                "&command=".. url.escape(command) .. 
                 "&newAction=" .. url.escape(action)
     })
 end
@@ -289,7 +290,19 @@ function handleEventRequest(c, path, headers, body)
         
         --if (event.control and (event.control == 'ST' or event.control == 'RR' or event.control == 'OL')) then
         if (event.control and event.control == 'ST') then
-            queueEvent(event.node, event.action)
+            queueEvent(event.node, event.control, event.action)
+            
+            if (DEBUG == true) then
+                log("Parser succeeded")
+                
+                for k, v in pairs(event) do
+                    log(k .. " = " .. v)
+                    
+                end
+            end
+            
+        elseif (event.control and (event.control == 'DOF' or event.control == 'DON')) then
+            queueEvent(event.node, event.control, event.action)
             
             if (DEBUG == true) then
                 log("Parser succeeded")

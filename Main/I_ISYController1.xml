@@ -71,7 +71,7 @@
 			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
 			<name>newEvent</name>
 			<job>
-				plugin.processEvent(lul_settings.node, lul_settings.newAction)
+				plugin.processEvent(lul_settings.node, lul_settings.command, lul_settings.newAction)
 				
 				return 4,0
 			</job>
@@ -122,7 +122,7 @@
 				return 4,0
 			</job>
 		</action>
-    <action>
+		<action>
 			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
 			<name>runProgram</name>
 			<job>

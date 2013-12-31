@@ -432,7 +432,7 @@ function sendCommand(insteonId, type, cmd)
 			end
 		end
 
-  elseif (type == "program") then
+	elseif (type == "program") then
 		local newCmd = insteonId .. "/" .. cmd
 	
 		debugLog("Rest command: /rest/programs/" .. newCmd)
@@ -454,7 +454,6 @@ function sendCommand(insteonId, type, cmd)
 			end
 		end
 
-		
 	else
 		local newCmd = url.escape(insteonId) .. "/cmd/" .. cmd
 	
@@ -482,7 +481,7 @@ end
 --
 -- Insteon Controller (Category 0)
 --
-function insteonEventCategory0(node, action, subCat)
+function insteonEventCategory0(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     debugLog("insteonEventCategory0: insteonId " .. insteonId .. " subDev: " .. subDev)
     local time = os.time(os.date('*t'))
@@ -493,11 +492,12 @@ function insteonEventCategory0(node, action, subCat)
         local sceneId = getChild(insteonId)
         
         -- Scene Button
-        if (action == "0") then
+        -- We only care about DON and DOF events for scene controllers
+        if (command == "DOF") then
             luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
         
-        elseif (action == "255") then
+        elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
@@ -508,7 +508,7 @@ end
 --
 -- Insteon Dimmable Device (Category 1)
 --
-function insteonEventCategory1(node, action, subCat)
+function insteonEventCategory1(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)") -- insteon id and sub device
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
     local time = os.time(os.date('*t'))
@@ -523,6 +523,50 @@ function insteonEventCategory1(node, action, subCat)
         if (nodeParent == node) then
             local result = false
             
+            -- We only care about status changes
+            if (command == "ST") then
+                -- SwitchPower --
+                
+                -- Off
+                if (action == "0") then
+                    result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
+                    
+                -- On
+                else
+                    result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
+                
+                end
+                
+                -- Dimmer --
+                local level = minMaxConversion(100, action)
+                local result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+                
+                if (result) then
+                    setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+                end
+            end
+        end
+        
+        -- Scene Button
+        -- We only care about DON and DOF events for scene controllers
+        if (command == "DOF") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+        
+        elseif (command == "DON") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        end
+        
+    -- FanLinc
+    elseif (insteonDeviceCategory1.fanLinc[subCat]) then
+        debugLog("FanLinc: node " .. node .. " action: " .. action)
+        local deviceId = getChild(node)
+        local result = false
+        
+        -- We only care about status changes
+        if (command == "ST") then
             -- SwitchPower --
             
             -- Off
@@ -535,76 +579,41 @@ function insteonEventCategory1(node, action, subCat)
             
             end
             
-            -- Dimmer --
+            -- FanLinc Dimmer
             local level = minMaxConversion(100, action)
-            local result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
-            
+            result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+                
             if (result) then
                 setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
             end
-        end
-        
-        -- Scene Button
-        if (action == "0") then
-            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-        
-        elseif (action == "255") then
-            luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-            
-        end
-        
-    -- FanLinc
-    elseif (insteonDeviceCategory1.fanLinc[subCat]) then
-        debugLog("FanLinc: node " .. node .. " action: " .. action)
-        local deviceId = getChild(node)
-        local result = false
-        
-        -- SwitchPower --
-        
-        -- Off
-        if (action == "0") then
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
-            
-        -- On
-        else
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
-        
-        end
-        
-        -- FanLinc Dimmer
-        local level = minMaxConversion(100, action)
-        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
-            
-        if (result) then
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
         end
         
     -- Dimmer
     elseif (insteonDeviceCategory1.dimmer[subCat]) then
         debugLog("Dimmer: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
-        
         local result = false
         
-        -- SwitchPower --
-        
-        -- Off
-        if (action == "0") then
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
+        -- We only care about status changes
+        if (command == "ST") then
+            -- SwitchPower --
             
-        -- On
-        else
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
-        
-        end
-        
-        local level = minMaxConversion(100, action)
-        result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
-        
-        if (result) then
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+            -- Off
+            if (action == "0") then
+                result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
+                
+            -- On
+            else
+                result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
+            
+            end
+            
+            local level = minMaxConversion(100, action)
+            result = setIfChanged(DIMMER_SERVICEID, 'LoadLevelStatus', level, deviceId)
+            
+            if (result) then
+                setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+            end
         end
     end
 end
@@ -612,7 +621,7 @@ end
 --
 -- Insteon Relay / Switch Device (Category 2)
 --
-function insteonEventCategory2(node, action, subCat)
+function insteonEventCategory2(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
     local time = os.time(os.date('*t'))
@@ -626,7 +635,47 @@ function insteonEventCategory2(node, action, subCat)
         -- Main Device Switched
         if (nodeParent == node) then
             local result = false
+              
+            -- We only care about status changes
+            if (command == "ST") then      
+                -- SwitchPower --
+                
+                -- Off
+                if (action == "0") then
+                    result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
                     
+                -- On
+                else
+                    result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
+                
+                end
+                
+                if (result) then
+                    setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+                end
+            end
+        end
+        
+        -- Scene Button
+        -- We only care about DON and DOF events for scene controllers
+        if (command == "DOF") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+        
+        elseif (command == "DON") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        end
+        
+    -- Relay / Switch
+    elseif (insteonDeviceCategory2.relay[subCat]) then
+        debugLog("Relay: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        local result = nil
+          
+        -- We only care about status changes
+        if (command == "ST") then      
             -- SwitchPower --
             
             -- Off
@@ -643,47 +692,13 @@ function insteonEventCategory2(node, action, subCat)
                 setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
             end
         end
-        
-        -- Scene Button
-        if (action == "0") then
-            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-        
-        elseif (action == "255") then
-            luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-            
-        end
-        
-    -- Relay / Switch
-    elseif (insteonDeviceCategory2.relay[subCat]) then
-        debugLog("Relay: node " .. node .. " action: " .. action)
-        local deviceId = getChild(nodeParent)
-                
-        local result = nil
-                
-        -- SwitchPower --
-        
-        -- Off
-        if (action == "0") then
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 0, deviceId)
-            
-        -- On
-        else
-            result = setIfChanged(SWITCH_SERVICEID, 'Status', 1, deviceId)
-        
-        end
-        
-        if (result) then
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
-        end
     end
 end
 
 --
 -- Insteon Sensors and Actuators (Category 7)
 --
-function insteonEventCategory7(node, action, subCat)
+function insteonEventCategory7(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     debugLog("insteonEventCategory7: insteonId " .. insteonId .. " subDev: " .. subDev)
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
@@ -694,47 +709,49 @@ function insteonEventCategory7(node, action, subCat)
         debugLog("IOLinc: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
         debugLog("deviceId = " .. deviceId)
-                
         local result = nil
+         
+        -- We only care about status changes
+        if (command == "ST") then       
+            -- Tripped --
+            local reverse = luup.variable_get(SENSOR_SERVICEID, "Reverse", deviceId)
+            if (reverse == nil) then
+                debugLog("reverse is nil ")
+                  luup.variable_set(SENSOR_SERVICEID, "Reverse", "0", deviceId)
+                  reverse = "0"
+            end
+
+            debugLog("reverse = " .. reverse)
+
+            -- not reversed
+            if (reverse == "0") then
+
+                -- secure (not tripped)
+                if (action == "0") then
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+      
+                -- tripped
+                else
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+      
+                end
                 
-        -- Tripped --
-        local reverse = luup.variable_get(SENSOR_SERVICEID, "Reverse", deviceId)
-        if (reverse == nil) then
-            debugLog("reverse is nil ")
-              luup.variable_set(SENSOR_SERVICEID, "Reverse", "0", deviceId)
-              reverse = "0"
-        end
-
-        debugLog("reverse = " .. reverse)
-
-        -- not reversed
-        if (reverse == "0") then
-
-            -- secure (not tripped)
-            if (action == "0") then
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
-  
-            -- tripped
+            -- reversed
             else
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
-  
+                -- tripped
+                if (action == "0") then
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+                  
+                -- secure (not tripped)
+                else
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+              
+                end
             end
             
-        -- reversed
-        else
-            -- tripped
-            if (action == "0") then
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
-              
-            -- secure (not tripped)
-            else
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
-          
+            if (result) then
+                setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
             end
-        end
-        
-        if (result) then
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
         end
     end
 end
@@ -742,7 +759,7 @@ end
 --
 -- Insteon Security / Health / Safety (Category 16)
 --
-function insteonEventCategory16(node, action, subCat)
+function insteonEventCategory16(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     debugLog("insteonEventCategory16: insteonId " .. insteonId .. " subDev: " .. subDev)
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
@@ -752,21 +769,23 @@ function insteonEventCategory16(node, action, subCat)
     if (insteonDeviceCategory16.motionSensor[subCat]) then
         debugLog("MotionSensor: node " .. node .. " action: " .. action)
         local deviceId = getChild(nodeParent)
-                
         local result = nil
-           
-        -- secure (not tripped)
-        if (action == "0") then
-            result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
-      
-        -- tripped
-        else
-            result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
-      
-        end
-        
-        if (result) then
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+         
+        -- We only care about status changes
+        if (command == "ST") then  
+            -- secure (not tripped)
+            if (action == "0") then
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+          
+            -- tripped
+            else
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+          
+            end
+            
+            if (result) then
+                setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+            end
         end
     end
 end
@@ -856,8 +875,8 @@ end
 --
 -- Process incoming event from ISY Event Daemon
 --
-function processEvent(node, action)
-    debugLog("processEvent: " .. node .. " action: " .. action )
+function processEvent(node, command, action)
+    debugLog("processEvent: " .. node .. " command: " .. command .. " action: " .. action )
     if (deviceMap[node] ~= nil) then
         local family = deviceMap[node].family
         
@@ -871,23 +890,23 @@ function processEvent(node, action)
             
             	-- insteon controller event
                 if (insteonDeviceCategory0[devCat]) then
-                    insteonEventCategory0(node, action, subCat)
+                    insteonEventCategory0(node, command, action, subCat)
                   
                 -- insteon dimmer event
                 elseif (insteonDeviceCategory1[devCat]) then
-                    insteonEventCategory1(node, action, subCat)
+                    insteonEventCategory1(node, command, action, subCat)
                     
                 -- insteon relay / switch event
                 elseif (insteonDeviceCategory2[devCat]) then
-                    insteonEventCategory2(node, action, subCat)
+                    insteonEventCategory2(node, command, action, subCat)
                     
                 -- insteon sensor / actuator event
                 elseif (insteonDeviceCategory7[devCat]) then
-                    insteonEventCategory7(node, action, subCat)
+                    insteonEventCategory7(node, command, action, subCat)
                     
                 -- insteon security / health / safety event
                 elseif (insteonDeviceCategory16[devCat]) then
-                    insteonEventCategory16(node, action, subCat)
+                    insteonEventCategory16(node, command, action, subCat)
                     
                 end
                 

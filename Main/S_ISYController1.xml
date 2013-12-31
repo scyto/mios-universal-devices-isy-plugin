@@ -68,6 +68,10 @@
           <direction>in</direction>
         </argument>
         <argument>
+          <name>command</name>
+          <direction>in</direction>
+        </argument>
+        <argument>
           <name>newAction</name>
           <direction>in</direction>
         </argument>
