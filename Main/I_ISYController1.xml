@@ -255,6 +255,64 @@
 				plugin.sendCommand(altId, "poll")
 			</run>
 		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:HVAC_UserOperatingMode1</serviceId>
+			<name>SetModeTarget</name>
+			<run>
+				local target = lul_settings.NewModeTarget
+				local altId = luup.devices[lul_device].id
+				
+				if (target == "Off") then
+					plugin.sendCommand(altId, "", "CLIMD/0")
+					
+				elseif (target == "HeatOn") then
+					plugin.sendCommand(altId, "", "CLIMD/1")
+					
+				elseif (target == "CoolOn") then
+					plugin.sendCommand(altId, "", "CLIMD/2")
+					
+				elseif (target == "AutoChangeOver") then
+					plugin.sendCommand(altId, "", "CLIMD/3")
+					
+				end
+			</run>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:HVAC_FanOperatingMode1</serviceId>
+			<name>SetMode</name>
+			<run>
+				local target = lul_settings.NewMode
+				local altId = luup.devices[lul_device].id
+				
+				if (target == "Auto") then
+					plugin.sendCommand(altId, "", "CLIFS/0")
+					
+				elseif (target == "ContinuousOn") then
+					plugin.sendCommand(altId, "", "CLIFS/1")
+					
+				end
+			</run>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Heat</serviceId>
+			<name>SetCurrentSetpoint</name>
+			<run>
+				local target = lul_settings.NewCurrentSetpoint
+				local altId = luup.devices[lul_device].id
+				
+			  plugin.sendCommand(altId, "", "CLISPH/" .. target)
+			</run>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Cool</serviceId>
+			<name>SetCurrentSetpoint</name>
+			<run>
+				local target = lul_settings.NewCurrentSetpoint
+				local altId = luup.devices[lul_device].id
+				
+			  plugin.sendCommand(altId, "", "CLISPC/" .. target)
+			</run>
+		</action>
     </actionList>
 </implementation>
 

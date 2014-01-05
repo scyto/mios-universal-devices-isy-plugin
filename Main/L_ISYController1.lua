@@ -20,6 +20,11 @@ local LOCK_SERVICEID = "urn:micasaverde-com:serviceId:DoorLock1"
 local SENSOR_SERVICEID = "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SCENE_SID = "urn:micasaverde-com:serviceId:SceneController1"
 local HADEVICE_SID = "urn:micasaverde-com:serviceId:HaDevice1"
+local TEMPSENSOR_SID = "urn:upnp-org:serviceId:TemperatureSensor1"
+local TEMPSETPOINT_HEAT_SID = "urn:upnp-org:serviceId:TemperatureSetpoint1_Heat"
+local TEMPSETPOINT_COOL_SID = "urn:upnp-org:serviceId:TemperatureSetpoint1_Cool"
+local HVAC_MODE_SID = "urn:upnp-org:serviceId:HVAC_UserOperatingMode1"
+local HVAC_FAN_MODE_SID = "urn:upnp-org:serviceId:HVAC_FanOperatingMode1"
 
 local pidFile = "/var/run/isy_event_daemon.pid"
 local initScriptPath = "/etc/init.d/isy_event_daemon"
@@ -158,6 +163,9 @@ local zwaveDeviceCategory4 = {
     },
     lock = {
         ['64'] = true
+    },
+    thermostat = {
+        ['8'] = true
     },
 }
 
@@ -794,7 +802,7 @@ end
 --
 -- Z-Wave Relay / Dimmer Device (Category 4)
 --
-function zwaveEventCategory4(node, action, subCat)
+function zwaveEventCategory4(node, command, action, subCat)
     local insteonId, subDev = string.match(node, "(%w+ %w+ %w+) (%w+)")  -- insteon id and sub device
     local nodeParent = deviceMap[node].parent -- parent node of insteon device
     local time = os.time(os.date('*t'))
@@ -869,6 +877,55 @@ function zwaveEventCategory4(node, action, subCat)
         if (result) then
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
         end
+
+    -- Thermostat
+    elseif (zwaveDeviceCategory4.thermostat[subCat]) then
+        debugLog("Z-Wave Thermostat: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        
+        local result = false
+        
+        if (command == "ST") then
+          -- current temperature --
+          result = setIfChanged(TEMPSENSOR_SID, 'CurrentTemperature', action, deviceId)
+
+        elseif (command == "CLISPH") then
+          -- heat setpoint --
+          result = setIfChanged(TEMPSETPOINT_HEAT_SID, 'CurrentSetpoint', action, deviceId)
+
+        elseif (command == "CLISPC") then
+          -- cool setpoint --
+          result = setIfChanged(TEMPSETPOINT_COOL_SID, 'CurrentSetpoint', action, deviceId)
+
+        elseif (command == "CLIMD") then
+          -- mode --
+          if (action == "0") then
+            result = setIfChanged(HVAC_MODE_SID, 'ModeStatus', "Off", deviceId)
+
+          elseif (action == "1") then
+            result = setIfChanged(HVAC_MODE_SID, 'ModeStatus', "HeatOn", deviceId)
+
+          elseif (action == "2") then
+            result = setIfChanged(HVAC_MODE_SID, 'ModeStatus', "CoolOn", deviceId)
+
+          elseif (action == "3") then
+            result = setIfChanged(HVAC_MODE_SID, 'ModeStatus', "AutoChangeOver", deviceId)
+
+          end
+
+        elseif (command == "CLIFS") then
+          -- fan --
+          if (action == "0") then
+            result = setIfChanged(HVAC_FAN_MODE_SID, 'Mode', "Auto", deviceId)
+          elseif (action == "1") then
+            result = setIfChanged(HVAC_FAN_MODE_SID, 'Mode', "ContinuousOn", deviceId)
+
+          end
+        end
+        
+        if (result) then
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+        end
     end
 end
 
@@ -915,7 +972,10 @@ function processEvent(node, command, action)
                 debugLog("Event family: " .. family .. " node: " .. node .. " dev cat: " .. devCat .. " sub cat: " .. subCat)
                    
                 if (zwaveDeviceCategory4[devCat]) then
-                    zwaveEventCategory4(node, action, subCat)
+                  debugLog("Processing zwaveEventCategory4")
+                    zwaveEventCategory4(node, command, action, subCat)
+                else
+                  debugLog("Not processing")
                     
                 end
             end
@@ -1669,6 +1729,29 @@ local function initializeChildren(device)
                             "urn:schemas-micasaverde-com:device:DoorLock:1", "D_DoorLock1.xml",
                             "", "urn:micasaverde-com:serviceId:DoorLock1,Status=" .. newStatus ..
                             "\nurn:garrettwp-com:serviceId:ISYController1,Family=4", false)
+
+                    -- Thermostat
+                    elseif (zwaveDeviceCategory4.thermostat[subCat]) then
+                    	  local loadLevel
+                        local newStatus
+                        
+                        debugLog("Creating Z-Wave thermostat for: node " .. node)
+                        
+                        -- temp
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
+                            newStatus = tonumber(status)
+                          
+                        -- Off 
+                        else
+                            newStatus = 0
+                        end
+
+                        debugLog("  Z-Wave thermostat current temp = " .. newStatus)
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-upnp-org:device:HVAC_ZoneThermostat:1", "D_HVAC_ZoneThermostat1.xml",
+                            "", "urn:upnp-org:serviceId:TemperatureSensor1,CurrentTemperature="..newStatus, false)
                     end
                 end
             end

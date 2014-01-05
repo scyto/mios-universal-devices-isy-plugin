@@ -312,6 +312,19 @@ function handleEventRequest(c, path, headers, body)
                     
                 end
             end
+
+        elseif (event.control and (event.control == 'CLIFS' or event.control == 'CLIMD' or event.control == 'CLISPC' or event.control == 'CLISPH')) then
+            queueEvent(event.node, event.control, event.action)
+            
+            if (DEBUG == true) then
+                log("Parser succeeded")
+                
+                for k, v in pairs(event) do
+                    log(k .. " = " .. v)
+                    
+                end
+            end
+
         end
         
         c:send("HTTP/1.1 200 OK\r\n\r\n")
