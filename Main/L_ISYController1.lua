@@ -1434,7 +1434,7 @@ local function initializeChildren(device)
                         debugLog("Creating KeypadLinc Dimmer for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then  
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then  
                             loadLevel = minMaxConversion(100, status)
                             newStatus = 1
                         
@@ -1467,7 +1467,7 @@ local function initializeChildren(device)
                         local newStatus
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             loadLevel = minMaxConversion(100, status)
                             newStatus = 1
                         
@@ -1489,7 +1489,7 @@ local function initializeChildren(device)
                         local fanNewStatus
                         
                         -- On
-                        if (fanStatus ~= nil and tonumber(fanStatus) > 0) then
+                        if (fanStatus ~= nil and fanStatus ~= " " and tonumber(fanStatus) > 0) then
                             fanNewStatus = 1
                         
                         -- Off
@@ -1513,7 +1513,7 @@ local function initializeChildren(device)
                         debugLog("Creating Dimmer for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             loadLevel = minMaxConversion(100, status)
                             newStatus = 1
                           
@@ -1542,7 +1542,7 @@ local function initializeChildren(device)
                         debugLog("Creating KeypadLinc Relay for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1571,7 +1571,7 @@ local function initializeChildren(device)
                            
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1597,7 +1597,7 @@ local function initializeChildren(device)
                         local newStatus
                         
                         -- On
-                        if (status ~= nil and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                         
                         -- Off
@@ -1618,7 +1618,7 @@ local function initializeChildren(device)
                         local relayNewStatus
                         
                         -- On
-                        if (relayStatus ~= nil and tonumber(relayStatus) > 0) then
+                        if (relayStatus ~= nil and relayStatus ~= " " and tonumber(relayStatus) > 0) then
                             relayNewStatus = 1
                         
                         -- Off
@@ -1643,7 +1643,7 @@ local function initializeChildren(device)
                         local newStatus
                         
                         -- tripped
-                        if (status ~= nil and tonumber(status) == 1) then
+                        if (status ~= nil and status ~= " " and tonumber(status) == 1) then
                             newStatus = 1
                         
                         -- secure (not tripped)
@@ -1672,7 +1672,7 @@ local function initializeChildren(device)
                         debugLog("Creating Z-Wave Relay for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
@@ -1694,7 +1694,7 @@ local function initializeChildren(device)
                         debugLog("Creating Z-Wave dimmer for: node " .. node)
                         
                         -- On
-                        if (status ~= nil and status ~= " " and tonumber(status) > 0) then
+                        if (status ~= nil and status ~= " " and status ~= " " and tonumber(status) > 0) then
                             newStatus = 1
                           
                         -- Off 
