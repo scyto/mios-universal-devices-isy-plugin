@@ -263,15 +263,18 @@ function daemonConnected()
 
         if (t['ESTABLISHED']) then
             setIfChanged(ISYCONTROLLER_SERVICEID, "DaemonConnected", "Connected", PARENT)
+            return true
         
         else        
             setIfChanged(ISYCONTROLLER_SERVICEID, "DaemonConnected", "Disconnected", PARENT)
-            
+            return false
+
         end
         
     else
         setIfChanged(ISYCONTROLLER_SERVICEID, "DaemonConnected", "Disconnected", PARENT)
-        
+        return false
+
     end
     
 end
@@ -503,13 +506,15 @@ function insteonEventCategory0(node, command, action, subCat)
         -- We only care about DON and DOF events for scene controllers
         if (command == "DOF") then
             luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-        
+            
         elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
-            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
+        
+        setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+        setIfChanged(SCENE_SID, 'LastSceneTime', time, sceneId)
+        setIfChanged(SCENE_SID, 'LastSceneID', tonumber(subDev), sceneId)
     end
 end
 
@@ -560,13 +565,16 @@ function insteonEventCategory1(node, command, action, subCat)
         if (command == "DOF") then
             luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , tonumber(subDev), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
-        
+            
         elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
         
+        setIfChanged(SCENE_SID, 'LastSceneTime', time, sceneId)
+        setIfChanged(SCENE_SID, 'LastSceneID', tonumber(subDev), sceneId)
+                        
     -- FanLinc
     elseif (insteonDeviceCategory1.fanLinc[subCat]) then
         debugLog("FanLinc: node " .. node .. " action: " .. action)
@@ -675,6 +683,9 @@ function insteonEventCategory2(node, command, action, subCat)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
+        
+        setIfChanged(SCENE_SID, 'LastSceneTime', time, sceneId)
+        setIfChanged(SCENE_SID, 'LastSceneID', tonumber(subDev), sceneId)
         
     -- Relay / Switch
     elseif (insteonDeviceCategory2.relay[subCat]) then
@@ -988,98 +999,6 @@ function processEvent(node, command, action)
 end
 
 --
--- Node / Device status xml parser
--- Parser for single device status data 
--- returned using the /rest/status/nodeid api
---
-function statusXMLParser(node)
-    local result = {}        
-    local nodeData = {}
-    local property = {}
-    local nodeId = node
-                   
-    local xmlParser = lxp.new({                  
-        CharacterData = function (parser, string) 
-            
-        end,                                        
-        StartElement = function (parser, name, attr)
-        	-- start of properties data
-        	if (name == "properties") then
-        		nodeData = {}
-        		property = {}
-        		nodeData['address'] = nodeId
-        		
-        	else
-        	
-        		if (name == "property") then
-					property[attr.id] = attr.value
-				end
-				
-			end
-			
-        end,                                
-        EndElement = function (parser, name) 
-            -- if end of node data
-            if (name == 'properties') then
-            	nodeData['property'] = property
-                table.insert(result, nodeData)
-            
-            end
-        end                                                     
-    })
-    
-    return {                                        
-        parse = function(this, s) return xmlParser:parse(s) end,
-        close = function(this) xmlParser:close() end,           
-        result = function(this) return result end,              
-    }                                                           
-end
-
---
--- All Nodes / Devices status xml parser
--- Parser for status of all devices on data 
--- returned using the /rest/status/ api
---
-function allStatusXMLParser()
-    local result = {}        
-    local nodeData = {}
-    local property = {}
-                   
-    local xmlParser = lxp.new({                  
-        CharacterData = function (parser, string) 
-            
-        end,                                        
-        StartElement = function (parser, name, attr)
-            -- start of node data
-            if (name == 'node') then
-                nodeData = {}
-                property = {}
-                nodeData['address'] = attr.id
-                
-            else
-                if (name == "property") then
-                    property[attr.id] = attr.value
-                end
-                
-            end
-        end,                                
-        EndElement = function (parser, name) 
-            -- if end of node data
-            if (name == 'node') then
-                nodeData['property'] = property
-                table.insert(result, nodeData)
-            end
-        end                                                     
-    })
-    
-    return {                                        
-        parse = function(this, s) return xmlParser:parse(s) end,
-        close = function(this) xmlParser:close() end,           
-        result = function(this) return result end,              
-    }                                                           
-end
-
---
 -- Node / Device config xml parser
 -- Parser for data returned using the
 -- /rest/nodes/devices api
@@ -1262,80 +1181,6 @@ function updateDeviceNames()
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                     end
                 end
-            end
-        end
-    end
-end
-
---
--- Get node / device status from ISY
---
-function getDeviceStatusData(node)
-    local request
-    local code
-    local headers
-    local t = {}
-    
-    if (node ~= nil) then
-        debugLog("Getting device status for node: " .. node)
-    	
-        request, code, headers = http.request {
-            url = "http://" .. isyIP .. ":" .. isyPort,
-            method = "GET /rest/status/" .. url.escape(node),
-            sink = ltn12.sink.table(t),
-            headers = {
-                ["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
-            }
-        }
-	
-    else 
-        debugLog("Getting device status for all nodes.")
-		
-        request, code, headers = http.request {
-            url = "http://" .. isyIP .. ":" .. isyPort,
-            method = "GET /rest/status/",
-            sink = ltn12.sink.table(t),
-            headers = {
-                ["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
-            }
-        }
-		
-    end
-
-    if (code == 200) then
-        httpResponse = table.concat(t)
-
-        if (httpResponse) then
-            local eventParser
-			
-            if (node ~= nil) then
-                eventParser = statusXMLParser(node)
-				
-            else 
-                eventParser = allStatusXMLParser()
-				
-            end
-			
-            local result, reason = eventParser:parse(httpResponse)
-            eventParser:close()
-			
-            if (result) then
-                local devices = eventParser.result()
-				
-                -- Add device to device map
-                for i = 1, #devices do
-                    local insteonId = devices[i].address
-                    
-                    if (deviceMap[insteonId] ~= nil) then
-                        
-                        for k, v in pairs(devices[i].property) do
-                            debugLog("Device: " .. insteonId .. " status: " .. k .. " value: " .. v)
-                            --deviceMap[insteonId][k] = v
-                        end
-                    end
-                end
-                
-                return true
             end
         end
     end
@@ -1814,7 +1659,13 @@ function init(lul_device)
         end
         
         -- Check if daemon is running
-        running()
+        if (running()) then
+            -- Check if connected to ISY
+            if (not daemonConnected()) then
+                daemonInit()
+            end
+
+        end
         
         return true
         
