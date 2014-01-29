@@ -787,24 +787,29 @@ function insteonEventCategory16(node, command, action, subCat)
     -- Motion Sensor
     if (insteonDeviceCategory16.motionSensor[subCat]) then
         debugLog("MotionSensor: node " .. node .. " action: " .. action)
-        local deviceId = getChild(nodeParent)
-        local result = nil
+        if (subDev == "1") then
+            local deviceId = getChild(nodeParent)
+            local result = nil
          
-        -- We only care about status changes
-        if (command == "ST") then  
-            -- secure (not tripped)
-            if (action == "0") then
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+            -- We only care about status changes
+            if (command == "ST") then  
+                -- secure (not tripped)
+                if (action == "0") then
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
           
-            -- tripped
-            else
-                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+                -- tripped
+                else
+                    result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
           
-            end
+                end
             
-            if (result) then
-                setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+                if (result) then
+                    setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+                end
             end
+        else
+          debugLog("MotionSensor: node " .. node .. " not main node - ignoring")
+          
         end
     end
 end

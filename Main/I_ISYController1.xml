@@ -300,6 +300,22 @@
             </run>
         </action>
         <action>
+            <serviceId>urn:upnp-org:serviceId:HVAC_UserOperatingMode1</serviceId>
+            <name>SetEnergyModeTarget</name>
+            <run>
+                local target = lul_settings.NewModeTarget
+                local altId = luup.devices[lul_device].id
+
+                if (target == "EnergySavingsMode") then
+                    plugin.sendCommand(altId, "", "DOF")
+
+                elseif (target == "Normal") then
+                    plugin.sendCommand(altId, "", "DON")
+
+                end
+            </run>
+        </action>
+        <action>
             <serviceId>urn:upnp-org:serviceId:HVAC_FanOperatingMode1</serviceId>
             <name>SetMode</name>
             <run>
@@ -322,7 +338,7 @@
                 local target = lul_settings.NewCurrentSetpoint
                 local altId = luup.devices[lul_device].id
                 
-              plugin.sendCommand(altId, "", "CLISPH/" .. target)
+                plugin.sendCommand(altId, "", "CLISPH/" .. target)
             </run>
         </action>
         <action>
@@ -332,7 +348,7 @@
                 local target = lul_settings.NewCurrentSetpoint
                 local altId = luup.devices[lul_device].id
                 
-              plugin.sendCommand(altId, "", "CLISPC/" .. target)
+                plugin.sendCommand(altId, "", "CLISPC/" .. target)
             </run>
         </action>
     </actionList>
