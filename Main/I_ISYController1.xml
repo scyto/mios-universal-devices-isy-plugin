@@ -1,66 +1,82 @@
 <?xml version="1.0"?>
 <implementation>
     <functions>
-    	local daemon
-    	local plugin
+        local daemon
+        local plugin
         local SWITCH_SERVICEID = "urn:upnp-org:serviceId:SwitchPower1"
+        
+        --
+        -- 
+        --
+        function runDaemonConnect()
+            plugin.daemonConnect()
+            
+        end
         
         --
         -- Check status of daemon
         --
         function checkStatus()
-        	--local time = os.time(os.date('*t'))
-        	plugin.running()
-        	plugin.daemonConnected()
-        	
-        	luup.call_timer("checkStatus", 1, 60, "")
+            local running = plugin.running()
+            local connected = plugin.daemonConnected()
+
+            -- If daemon is not running, start daemon before we connect
+            if (not running) then
+                plugin.debugLog("Daemon is not running. Starting daemon.")
+                plugin.start()
+                
+                --luup.call_timer("runDaemonConnect", 1, 2, "")
+
+            -- If daemon is running and not connected, connect to ISY
+            elseif (running and not connected) then
+                plugin.debugLog("Daemon is running, but not connected to ISY. Creating new connection.")
+                --plugin.daemonConnect()
+            
+            else
+                plugin.debugLog("Daemon is running and connected.")
+
+            end
+            
+            luup.call_timer("checkStatus", 1, 60, "")
         end
         
         --
-        -- 
+        -- Plugin Startup
         --
-        function runDaemonInit()
-        	plugin.daemonInit()
-        	
-    	end
-        
-		--
-		-- Plugin Startup
-		--
-		function initialize(lul_device)
-			-- Put the /etc/cmh-ludl and /etc/cmh-lu directories into the Lua include path.
-			if (package.path:find("/etc/cmh-ludl/?.lua;/etc/cmh-lu/?.lua", 1, true) == nil) then
-				package.path = package.path .. ";/etc/cmh-ludl/?.lua;/etc/cmh-lu/?.lua"
-			end
-			
-			-- Load the Lua event daemon implementation
-			package.loaded.L_ISYEvent = nil
-			daemon = require("L_ISYEvent")
-			
-			-- Load the ISY Lua implementation.
-			package.loaded.L_ISYController1 = nil
-			plugin = require("L_ISYController1")
-			
-			-- Call initialization code.
-			local status =  plugin.init(lul_device)
-			
-			if (status) then
-				checkStatus()
-			end
-			
-			return status
-		end
+        function initialize(lul_device)
+            -- Put the /etc/cmh-ludl and /etc/cmh-lu directories into the Lua include path.
+            if (package.path:find("/etc/cmh-ludl/?.lua;/etc/cmh-lu/?.lua", 1, true) == nil) then
+                package.path = package.path .. ";/etc/cmh-ludl/?.lua;/etc/cmh-lu/?.lua"
+            end
+            
+            -- Load the Lua event daemon implementation
+            package.loaded.L_ISYEvent = nil
+            daemon = require("L_ISYEvent")
+            
+            -- Load the ISY Lua implementation.
+            package.loaded.L_ISYController1 = nil
+            plugin = require("L_ISYController1")
+            
+            -- Call initialization code.
+            local status =  plugin.init(lul_device)
+            
+            if (status) then
+                checkStatus()
+            end
+            
+            return status
+        end
     </functions>
     <startup>initialize</startup>
     <actionList>
-    	<action>
+        <action>
             <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
             <name>initialize</name>
             <run>
                 return daemon.initialize(lul_device)
             </run>
         </action>
-    	<action>
+        <action>
             <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
             <name>uninstall</name>
             <run>
@@ -68,251 +84,257 @@
             </run>
         </action>
         <action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>newEvent</name>
-			<job>
-				plugin.processEvent(lul_settings.node, lul_settings.command, lul_settings.newAction)
-				
-				return 4,0
-			</job>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>stopDaemon</name>
-			<run>
-				plugin.stop()
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>startDaemon</name>
-			<run>
-				plugin.start()
-				
-				luup.call_timer("runDaemonInit", 1, 2, "")
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>restartDaemon</name>
-			<run>
-				plugin.restart()
-				
-				luup.call_timer("runDaemonInit", 1, 2, "")
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>updateDeviceNames</name>
-			<job>
-				plugin.updateDeviceNames()
-				
-				return 4,0
-			</job>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>runCommand</name>
-			<job>
-				local id = lul_settings.id
-				local command = lul_settings.command
-				
-				plugin.sendCommand(id, "command", command)
-				
-				return 4,0
-			</job>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>runProgram</name>
-			<job>
-				local program = lul_settings.program
-				local path = lul_settings.path
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>newEvent</name>
+            <job>
+                plugin.processEvent(lul_settings.node, lul_settings.command, lul_settings.newAction)
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>stopDaemon</name>
+            <run>
+                plugin.stop()
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>startDaemon</name>
+            <run>
+                plugin.start()
+                
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>restartDaemon</name>
+            <run>
+                plugin.restart()
+                
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>connect</name>
+            <run>
+                plugin.daemonConnect()
+                
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>updateDeviceNames</name>
+            <job>
+                plugin.updateDeviceNames()
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>runCommand</name>
+            <job>
+                local id = lul_settings.id
+                local command = lul_settings.command
+                
+                plugin.sendCommand(id, "command", command)
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>runProgram</name>
+            <job>
+                local program = lul_settings.program
+                local path = lul_settings.path
 
-				plugin.sendCommand(program, "program", path)
-				
-				return 4,0
-			</job>
-		</action>
-		<action>
-			<serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
-			<name>runScene</name>
-			<job>
-				local id = lul_settings.id
-				local target = lul_settings.newTargetValue
-				
-				if (target == "0") then
-					plugin.sendCommand(id, "", "DOF")
-				
-				else
-					plugin.sendCommand(id, "", "DON")
-					
-				end
-				
-				return 4,0
-			</job>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:SwitchPower1</serviceId>
-			<name>SetTarget</name>
-			<run>
-				local target = lul_settings.newTargetValue
-				local altId = luup.devices[lul_device].id
-				
-				if (target == "1") then
-					plugin.sendCommand(altId, "", "DON")
-					
-				else 
-					plugin.sendCommand(altId, "", "DOF")
-				
-				end
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:Dimming1</serviceId>
-			<name>SetLoadLevelTarget</name>
-			<run>
-				local level = lul_settings.newLoadlevelTarget
-				local altId = luup.devices[lul_device].id
+                plugin.sendCommand(program, "program", path)
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>runScene</name>
+            <job>
+                local id = lul_settings.id
+                local target = lul_settings.newTargetValue
+                
+                if (target == "0") then
+                    plugin.sendCommand(id, "", "DOF")
+                
+                else
+                    plugin.sendCommand(id, "", "DON")
+                    
+                end
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:SwitchPower1</serviceId>
+            <name>SetTarget</name>
+            <run>
+                local target = lul_settings.newTargetValue
+                local altId = luup.devices[lul_device].id
+                
+                if (target == "1") then
+                    plugin.sendCommand(altId, "", "DON")
+                    
+                else 
+                    plugin.sendCommand(altId, "", "DOF")
+                
+                end
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:Dimming1</serviceId>
+            <name>SetLoadLevelTarget</name>
+            <run>
+                local level = lul_settings.newLoadlevelTarget
+                local altId = luup.devices[lul_device].id
                 local family = luup.variable_get("urn:garrettwp-com:serviceId:ISYController1", "Family", lul_device)
                 local newLevel = plugin.minMaxConversion(255, level)
 
                 if (family == nil or family == "1") then
-                    plugin.debugLog("ISYController: family is nil - assuming Insteon dimmer - using scale 0-255")
+                    plugin.debugLog("Family is nil - assuming Insteon dimmer - using scale 0-255")
         
                 elseif (family == "4") then
-                    plugin.debugLog("ISYController: family = 4 - Z-Wave dimmer - using scale 0-100")
+                    plugin.debugLog("Family = 4 - Z-Wave dimmer - using scale 0-100")
                     newLevel = level
                 end
-			   
-				if (level == "0") then
-					plugin.sendCommand(altId, "", "DOF")
-			
-				else
-					plugin.sendCommand(altId, "", "DON/" .. newLevel)
-				
-				end
-               	
-			</run>
-		</action>
-    	<action>
-			<serviceId>urn:micasaverde-com:serviceId:DoorLock1</serviceId>
-			<name>SetTarget</name>
-			<run>
-				local target = lul_settings.newTargetValue
-				local altId = luup.devices[lul_device].id
-				
-				if (target == "1") then
-					plugin.sendCommand(altId, "", "SECMD/1")
-					
-				else 
-					plugin.sendCommand(altId, "", "SECMD/0")
-				
-				end
-			</run>
-		</action>
-    	<action>
-			<serviceId>urn:micasaverde-com:serviceId:SecuritySensor1</serviceId>
-			<name>SetArmed</name>
-			<run>
-				local target = lul_settings.newArmedValue
-				plugin.debugLog("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
-				
-				if (target == "1") then
-			  		plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
-					
-				else 
-          			plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
-					
-        		end
-			</run>
-		</action>
-		<action>
-		  	<serviceId>urn:micasaverde-com:serviceId:HaDevice1</serviceId>
-			<name>ToggleState</name>
-			<run>
-				local altId = luup.devices[lul_device].id
-				
-				-- Toggle the device state, as we know it.
-				local state = luup.variable_get(SWITCH_SERVICEID, "Status", lul_device)
+               
+                if (level == "0") then
+                    plugin.sendCommand(altId, "", "DOF")
+            
+                else
+                    plugin.sendCommand(altId, "", "DON/" .. newLevel)
+                
+                end
+                
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:micasaverde-com:serviceId:DoorLock1</serviceId>
+            <name>SetTarget</name>
+            <run>
+                local target = lul_settings.newTargetValue
+                local altId = luup.devices[lul_device].id
+                
+                if (target == "1") then
+                    plugin.sendCommand(altId, "", "SECMD/1")
+                    
+                else 
+                    plugin.sendCommand(altId, "", "SECMD/0")
+                
+                end
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:micasaverde-com:serviceId:SecuritySensor1</serviceId>
+            <name>SetArmed</name>
+            <run>
+                local target = lul_settings.newArmedValue
+                plugin.debugLog("SetArmed: lul_device = " .. lul_device .. "; target = " .. target)
+                
+                if (target == "1") then
+                    plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "1", lul_device)
+                    
+                else 
+                    plugin.setIfChanged("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", "0", lul_device)
+                    
+                end
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:micasaverde-com:serviceId:HaDevice1</serviceId>
+            <name>ToggleState</name>
+            <run>
+                local altId = luup.devices[lul_device].id
+                
+                -- Toggle the device state, as we know it.
+                local state = luup.variable_get(SWITCH_SERVICEID, "Status", lul_device)
 
-				if (state == "1") then
-				  plugin.sendCommand(altId, "", "DOF")
+                if (state == "1") then
+                  plugin.sendCommand(altId, "", "DOF")
 
-				else
-				  plugin.sendCommand(altId, "", "DON")
-				  
-				end
-				
-			</run>
-		</action>
-		<action>
-		  	<serviceId>urn:micasaverde-com:serviceId:HaDevice1</serviceId>
-			<name>Poll</name>
-			<run>
-				local altId = luup.devices[lul_device].id
-				
-				plugin.sendCommand(altId, "poll")
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:HVAC_UserOperatingMode1</serviceId>
-			<name>SetModeTarget</name>
-			<run>
-				local target = lul_settings.NewModeTarget
-				local altId = luup.devices[lul_device].id
-				
-				if (target == "Off") then
-					plugin.sendCommand(altId, "", "CLIMD/0")
-					
-				elseif (target == "HeatOn") then
-					plugin.sendCommand(altId, "", "CLIMD/1")
-					
-				elseif (target == "CoolOn") then
-					plugin.sendCommand(altId, "", "CLIMD/2")
-					
-				elseif (target == "AutoChangeOver") then
-					plugin.sendCommand(altId, "", "CLIMD/3")
-					
-				end
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:HVAC_FanOperatingMode1</serviceId>
-			<name>SetMode</name>
-			<run>
-				local target = lul_settings.NewMode
-				local altId = luup.devices[lul_device].id
-				
-				if (target == "Auto") then
-					plugin.sendCommand(altId, "", "CLIFS/0")
-					
-				elseif (target == "ContinuousOn") then
-					plugin.sendCommand(altId, "", "CLIFS/1")
-					
-				end
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Heat</serviceId>
-			<name>SetCurrentSetpoint</name>
-			<run>
-				local target = lul_settings.NewCurrentSetpoint
-				local altId = luup.devices[lul_device].id
-				
-			  plugin.sendCommand(altId, "", "CLISPH/" .. target)
-			</run>
-		</action>
-		<action>
-			<serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Cool</serviceId>
-			<name>SetCurrentSetpoint</name>
-			<run>
-				local target = lul_settings.NewCurrentSetpoint
-				local altId = luup.devices[lul_device].id
-				
-			  plugin.sendCommand(altId, "", "CLISPC/" .. target)
-			</run>
-		</action>
+                else
+                  plugin.sendCommand(altId, "", "DON")
+                  
+                end
+                
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:micasaverde-com:serviceId:HaDevice1</serviceId>
+            <name>Poll</name>
+            <run>
+                local altId = luup.devices[lul_device].id
+                
+                plugin.sendCommand(altId, "poll")
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:HVAC_UserOperatingMode1</serviceId>
+            <name>SetModeTarget</name>
+            <run>
+                local target = lul_settings.NewModeTarget
+                local altId = luup.devices[lul_device].id
+                
+                if (target == "Off") then
+                    plugin.sendCommand(altId, "", "CLIMD/0")
+                    
+                elseif (target == "HeatOn") then
+                    plugin.sendCommand(altId, "", "CLIMD/1")
+                    
+                elseif (target == "CoolOn") then
+                    plugin.sendCommand(altId, "", "CLIMD/2")
+                    
+                elseif (target == "AutoChangeOver") then
+                    plugin.sendCommand(altId, "", "CLIMD/3")
+                    
+                end
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:HVAC_FanOperatingMode1</serviceId>
+            <name>SetMode</name>
+            <run>
+                local target = lul_settings.NewMode
+                local altId = luup.devices[lul_device].id
+                
+                if (target == "Auto") then
+                    plugin.sendCommand(altId, "", "CLIFS/0")
+                    
+                elseif (target == "ContinuousOn") then
+                    plugin.sendCommand(altId, "", "CLIFS/1")
+                    
+                end
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Heat</serviceId>
+            <name>SetCurrentSetpoint</name>
+            <run>
+                local target = lul_settings.NewCurrentSetpoint
+                local altId = luup.devices[lul_device].id
+                
+              plugin.sendCommand(altId, "", "CLISPH/" .. target)
+            </run>
+        </action>
+        <action>
+            <serviceId>urn:upnp-org:serviceId:TemperatureSetpoint1_Cool</serviceId>
+            <name>SetCurrentSetpoint</name>
+            <run>
+                local target = lul_settings.NewCurrentSetpoint
+                local altId = luup.devices[lul_device].id
+                
+              plugin.sendCommand(altId, "", "CLISPC/" .. target)
+            </run>
+        </action>
     </actionList>
 </implementation>
 

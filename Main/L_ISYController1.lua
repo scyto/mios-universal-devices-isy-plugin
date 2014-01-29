@@ -302,7 +302,7 @@ end
 --
 -- Intialize and Subscribe to ISY Even Daemon
 --
-function daemonInit()
+function daemonConnect()
     debugLog("Initializing and subscribing to ISY.")
     
     if (running()) then
@@ -1656,15 +1656,6 @@ function init(lul_device)
         if (status) then
             initializeChildren(lul_device) 
             
-        end
-        
-        -- Check if daemon is running
-        if (running()) then
-            -- Check if connected to ISY
-            if (not daemonConnected()) then
-                daemonInit()
-            end
-
         end
         
         return true

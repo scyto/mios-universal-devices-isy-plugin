@@ -156,6 +156,27 @@
                     "ControlGroup": "7",
                     "ControlType": "button",
                     "Label": {
+                        "lang_tag": "cmd_connect",
+                        "text": "Connect"
+                    },
+                    "Display": {
+                        "Service": "urn:garrettwp-com:serviceId:ISYController1",
+                        "Variable": "DaemonConnected",
+                        "Value": "Connected",
+                        "Top": 100,
+                        "Left": 50,
+                        "Width": 100,
+                        "Height": 20
+                    },
+                    "Command": {
+                        "Service": "urn:garrettwp-com:serviceId:ISYController1",
+                        "Action": "connect"
+                    }
+                },
+                {
+                    "ControlGroup": "8",
+                    "ControlType": "button",
+                    "Label": {
                         "lang_tag": "cmd_update_names",
                         "text": "Update Names"
                     },
@@ -163,7 +184,7 @@
                         "Service": "urn:garrettwp-com:serviceId:ISYController1",
                         "Variable": "",
                         "Top": 100,
-                        "Left": 50,
+                        "Left": 170,
                         "Width": 140,
                         "Height": 20
                     },
@@ -173,7 +194,7 @@
                     }
                 },
                 {
-            		"ControlGroup": "8",
+            		"ControlGroup": "9",
                     "ControlType": "button",
                     "Label": {
                         "lang_tag": "cmd_initialize",
@@ -191,7 +212,7 @@
                     }
                 },
                 {
-                	"ControlGroup": "9",
+                	"ControlGroup": "10",
                     "ControlType": "button",
                     "Label": {
                         "lang_tag": "cmd_uninstall",

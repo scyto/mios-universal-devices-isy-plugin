@@ -103,6 +103,11 @@
       </argumentList>
     </action>
     <action>
+      <name>connect</name>
+      <argumentList>
+      </argumentList>
+    </action>
+    <action>
       <name>updateDeviceNames</name>
       <argumentList>
       </argumentList>
