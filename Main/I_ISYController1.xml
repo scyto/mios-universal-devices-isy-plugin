@@ -332,9 +332,11 @@
 
                 if (target == "EnergySavingsMode") then
                     plugin.sendCommand(altId, "", "DOF")
+                    plugin.setIfChanged("urn:upnp-org:serviceId:HVAC_UserOperatingMode1", "EnergyModeStatus", "EnergySavingsMode", lul_device)
 
                 elseif (target == "Normal") then
                     plugin.sendCommand(altId, "", "DON")
+                    plugin.setIfChanged("urn:upnp-org:serviceId:HVAC_UserOperatingMode1", "EnergyModeStatus", "Normal", lul_device)
 
                 end
             </run>
