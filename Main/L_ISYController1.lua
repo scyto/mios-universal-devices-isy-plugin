@@ -465,6 +465,28 @@ function sendCommand(insteonId, type, cmd)
 			end
 		end
 
+	elseif (type == "variable") then
+		local newCmd = insteonId .. "/" .. cmd
+	
+		debugLog("Rest command: /rest/vars/" .. newCmd)
+	
+		local t = {}
+		request, code, headers = http.request {
+			url = "http://" .. isyIP .. ":" .. isyPort,
+			method = "GET /rest/vars/" .. newCmd,
+			sink = ltn12.sink.table(t),
+			headers = {
+				["Authorization"] = "Basic " .. (mime.b64(isyUser .. ":" .. isyPass))
+			}
+		}
+		
+		if (code == 200) then
+			if (DEBUG == true) then
+				httpResponse = table.concat(t)
+				debugLog(httpResponse) 
+			end
+		end
+
 	else
 		local newCmd = url.escape(insteonId) .. "/cmd/" .. cmd
 	

@@ -158,6 +158,30 @@
         </action>
         <action>
             <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>setIntegerVariable</name>
+            <job>
+                local variableNumber = lul_settings.variableNumber
+                local value = lul_settings.value
+
+                plugin.sendCommand("set/1/"..variableNumber, "variable", value)
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
+            <name>setStateVariable</name>
+            <job>
+                local variableNumber = lul_settings.variableNumber
+                local value = lul_settings.value
+
+                plugin.sendCommand("set/2/"..variableNumber, "variable", value)
+                
+                return 4,0
+            </job>
+        </action>
+        <action>
+            <serviceId>urn:garrettwp-com:serviceId:ISYController1</serviceId>
             <name>runScene</name>
             <job>
                 local id = lul_settings.id
