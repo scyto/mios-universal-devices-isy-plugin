@@ -167,6 +167,9 @@ local zwaveDeviceCategory4 = {
     thermostat = {
         ['8'] = true
     },
+    motionSensor = {
+        ['33'] = true
+    },
 }
 
 function log(text, level)
@@ -916,9 +919,32 @@ function zwaveEventCategory4(node, command, action, subCat)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
         end
 
+    -- Motion Sensor
+    elseif (zwaveDeviceCategory4.motionSensor[subCat]) then
+        debugLog("MotionSensor: node " .. node .. " action: " .. action)
+        local deviceId = getChild(nodeParent)
+        local result = nil
+         
+        -- We only care about status changes
+        if (command == "ST") then  
+            -- secure (not tripped)
+            if (action == "0") then
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 0, deviceId)
+          
+            -- tripped
+            else
+                result = setIfChanged(SENSOR_SERVICEID, 'Tripped', 1, deviceId)
+          
+            end
+            
+            if (result) then
+                setIfChanged(HADEVICE_SID, 'LastUpdate', time, deviceId)
+            end
+        end
+          
     -- Thermostat
     elseif (zwaveDeviceCategory4.thermostat[subCat]) then
-        debugLog("Z-Wave Thermostat: node " .. node .. " action: " .. action)
+        debugLog("Z-Wave Thermostat: node " .. node .. " action: " .. action .. " command: " .. command)
         local deviceId = getChild(nodeParent)
         
         local result = false
@@ -926,6 +952,14 @@ function zwaveEventCategory4(node, command, action, subCat)
         if (command == "ST") then
           -- current temperature --
           result = setIfChanged(TEMPSENSOR_SID, 'CurrentTemperature', action, deviceId)
+
+        elseif (command == "DON") then
+          -- Normal mode --
+          result = setIfChanged(HVAC_MODE_SID, "EnergyModeStatus", "Normal", deviceId)
+
+        elseif (command == "DOF") then
+          -- ESM --
+          result = setIfChanged(HVAC_MODE_SID, "EnergyModeStatus", "EnergySavingsMode", deviceId)
 
         elseif (command == "CLISPH") then
           -- heat setpoint --
@@ -1101,7 +1135,7 @@ function updateDeviceNames()
                 
                 	-- RemoteLinc
                     if (insteonDeviceCategory0.remoteLinc[subCat]) then
-                        debugLog("Updating RemoteLinc name for: node " .. node)
+                        debugLog("Updating RemoteLinc name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[insteonId])
                         
                         -- Scene Controller
                         luup.attr_set("name", string.format("%s SC", name), insteonToChildMap[insteonId])
@@ -1112,7 +1146,7 @@ function updateDeviceNames()
                     
                     -- KeypadLinc Dimmer
                     if (insteonDeviceCategory1.dimmerKPL[subCat]) then
-                        debugLog("Updating KeypadLinc Dimmer name for: node " .. node)
+                        debugLog("Updating KeypadLinc Dimmer name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         -- Dimmable light
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
@@ -1122,7 +1156,7 @@ function updateDeviceNames()
                         
                     -- FanLinc
                     elseif (insteonDeviceCategory1.fanLinc[subCat]) then
-                        debugLog("Updating FanLinc name for: node " .. node)
+                        debugLog("Updating FanLinc name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         -- Dimmable light
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
@@ -1132,7 +1166,7 @@ function updateDeviceNames()
                         
                     -- Dimmer
                     elseif (insteonDeviceCategory1.dimmer[subCat]) then
-                        debugLog("Updating Dimmer name for: node " .. node)
+                        debugLog("Updating Dimmer name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                         
@@ -1143,7 +1177,7 @@ function updateDeviceNames()
                     
                     -- KeypadLinc Relay
                     if (insteonDeviceCategory2.relayKPL[subCat]) then
-                        debugLog("Updating KeypadLinc Relay name for: node " .. node)
+                        debugLog("Updating KeypadLinc Relay name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         -- Binary light
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
@@ -1153,7 +1187,7 @@ function updateDeviceNames()
                                     
                     -- Relay / Switch
                     elseif (insteonDeviceCategory2.relay[subCat]) then
-                        debugLog("Updating Relay name for: node " .. node)
+                        debugLog("Updating Relay name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                     end
@@ -1163,13 +1197,13 @@ function updateDeviceNames()
                     
                     -- IOLinc
                     if (insteonDeviceCategory7.iolinc[subCat]) then
-                        debugLog("Updating IOLinc name for: node " .. node)
+                        debugLog("Updating IOLinc name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         -- Security Sensor
-                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+                        --luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                               
                         -- Relay
-                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[insteonId] .. " 2")
+                        --luup.attr_set("name", string.format("%s", name), insteonToChildMap[insteonId] .. " 2")
                     end             
                    
                 -- Security / Health / Safety
@@ -1177,7 +1211,7 @@ function updateDeviceNames()
                     
                     -- Motion Sensor
                     if (insteonDeviceCategory16.motionSensor[subCat]) then
-                        debugLog("Updating Motion Sensor name for: node " .. node)
+                        debugLog("Updating Motion Sensor name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                     end
@@ -1190,22 +1224,35 @@ function updateDeviceNames()
                     
                     -- Relay
                     if (zwaveDeviceCategory4.relay[subCat]) then
-                        debugLog("Updating Z-Wave Relay name for: node " .. node)
+                        debugLog("Updating Z-Wave Relay name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         -- Binary light
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
                               
                     -- Dimmer
                     elseif (zwaveDeviceCategory4.dimmer[subCat]) then
-                        debugLog("Updating Z-Wave dimmer name for: node " .. node)
+                        debugLog("Updating Z-Wave dimmer name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
 
                     -- Lock
                     elseif (zwaveDeviceCategory4.lock[subCat]) then
-                        debugLog("Updating Z-Wave lock name for: node " .. node)
+                        debugLog("Updating Z-Wave lock name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
                         
                         luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+
+                    -- Thermostat
+                    elseif (zwaveDeviceCategory4.thermostat[subCat]) then
+                        debugLog("Updating Z-Wave thermostat name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+
+                    -- Motion Sensor
+                    elseif (zwaveDeviceCategory4.motionSensor[subCat]) then
+                        debugLog("Updating Z-Wave motionSensor name for: node " .. node .. " to: " .. name .. " for deviceid: " .. insteonToChildMap[parent])
+                        
+                        luup.attr_set("name", string.format("%s", name), insteonToChildMap[parent])
+
                     end
                 end
             end
@@ -1624,6 +1671,29 @@ local function initializeChildren(device)
                             string.format("%s", parent), string.format("%s", name),
                             "urn:schemas-upnp-org:device:HVAC_ZoneThermostat:1", "D_HVAC_ZoneThermostat1.xml",
                             "", "urn:upnp-org:serviceId:TemperatureSensor1,CurrentTemperature="..newStatus, false)
+
+                    -- Motion Sensor
+                    elseif (zwaveDeviceCategory4.motionSensor[subCat]) then
+
+                    	  local newStatus
+                        
+                        debugLog("Creating Z-Wave motion sensor for: node " .. node)
+                        
+                        -- tripped
+                        if (status ~= nil and status ~= " " and tonumber(status) == 1) then
+                            newStatus = 1
+                        
+                        -- secure (not tripped)
+                        else
+                            newStatus = 0
+                        end
+                        
+                        luup.chdev.append(device, children,
+                            string.format("%s", parent), string.format("%s", name),
+                            "urn:schemas-micasaverde-com:device:MotionSensor:1", "D_MotionSensor1.xml",
+                            "", "urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=" .. newStatus ..  
+                            "\n" .. "urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0" ..
+                            "\nurn:garrettwp-com:serviceId:ISYController1,Family=4", false)
                     end
                 end
             end
