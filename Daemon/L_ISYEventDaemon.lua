@@ -301,7 +301,7 @@ function handleEventRequest(c, path, headers, body)
                 end
             end
             
-        elseif (event.control and (event.control == 'DOF' or event.control == 'DON')) then
+        elseif (event.control and (event.control == 'DOF' or event.control == 'DON' or event.control == 'DFOF' or event.control == 'DFON')) then
             queueEvent(event.node, event.control, event.action)
             
             if (DEBUG == true) then

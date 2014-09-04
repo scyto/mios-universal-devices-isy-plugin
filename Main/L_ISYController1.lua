@@ -41,7 +41,8 @@ local insteonToChildMap = {}
 local insteonDeviceCategory0 = {
     ['0'] = true,
     remoteLinc = {
-        ['16'] = true
+        ['16'] = true,
+        ['18'] = true
     }
 }
 
@@ -534,6 +535,12 @@ function insteonEventCategory0(node, command, action, subCat)
             
         elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+
+        elseif (command == "DFOF") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , (tonumber(subDev)+8), sceneId)
+            
+        elseif (command == "DFON") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , (tonumber(subDev)+8), sceneId)
             
         end
         
@@ -593,6 +600,14 @@ function insteonEventCategory1(node, command, action, subCat)
             
         elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        elseif (command == "DFOF") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , (tonumber(subDev)+8), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        elseif (command == "DFON") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , (tonumber(subDev)+8), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
@@ -705,6 +720,14 @@ function insteonEventCategory2(node, command, action, subCat)
         
         elseif (command == "DON") then
             luup.variable_set(SCENE_SID, "sl_SceneActivated" , tonumber(subDev), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+            
+        elseif (command == "DFOF") then
+            luup.variable_set(SCENE_SID, "sl_SceneDeactivated" , (tonumber(subDev)+8), sceneId)
+            setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
+        
+        elseif (command == "DFON") then
+            luup.variable_set(SCENE_SID, "sl_SceneActivated" , (tonumber(subDev)+8), sceneId)
             setIfChanged(HADEVICE_SID, 'LastUpdate', time, sceneId)
             
         end
