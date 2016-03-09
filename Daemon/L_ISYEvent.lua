@@ -39,7 +39,7 @@ start() {
     if [ -n "$PROXY_DAEMON_LZO" ]; then
         /usr/bin/pluto-lzo d "$PROXY_DAEMON_LZO" "$PROXY_DAEMON"
     fi
-
+    
     # Close file descriptors.
     for fd in /proc/self/fd/*; do
         fd=${fd##*/}
@@ -48,6 +48,11 @@ start() {
             *) eval "exec $fd<&-"
         esac
     done
+
+    # Find if the file is already decompressed in /etc/cmh-ldl - if it is assume we are running on openLuup
+    if [ -f /etc/cmh-ludl/L_ISYEventDaemon.lua ]; then
+        PROXY_DAEMON=/etc/cmh-ludl/L_ISYEventDaemon.lua
+    fi
 
     # Run daemon.
     /usr/bin/lua "$PROXY_DAEMON" </dev/null >/dev/null 2>&1 &
